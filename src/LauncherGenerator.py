@@ -6,6 +6,16 @@ import platform
 import subprocess
 import os
 from pathlib import Path
+from datetime import datetime
+
+
+
+def log(message, mode="Info"):
+    try :
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"[{timestamp}] | [{mode}] {message}", flush=True)
+    except Exception as e:
+        print(f"[{timestamp}] | [Error] 错误地引用log函数: {e}", flush=True)
 
 class MinecraftLauncherGenerator:
     def __init__(self, version, loader_type="vanilla", loader_version=None):
@@ -23,6 +33,7 @@ class MinecraftLauncherGenerator:
 
     def _fetch_version_manifest(self):
         """从Mojang API获取版本元数据"""
+        log("正在获取版本元数据...")
         manifest_url = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
         response = requests.get(manifest_url)
         response.raise_for_status()
@@ -31,11 +42,14 @@ class MinecraftLauncherGenerator:
             if entry["id"] == self.version:
                 version_url = entry["url"]
                 version_response = requests.get(version_url)
+                log(f"获取完成: {version_response.json}")
                 return version_response.json()
+        log(f"版本 {self.version} 不存在", "Error")
         raise ValueError(f"版本 {self.version} 不存在")
 
     def _generate_classpath(self):
         """构建动态类路径"""
+        log("正在生成动态类路径...")
         libraries = []
         # 原生库处理
         libraries.extend([
@@ -56,17 +70,22 @@ class MinecraftLauncherGenerator:
                 for lib in fabric_meta["libraries"]
             ])
         
+        log(f"动态类路径生成完成: {';'.join(libraries)}")
+        
         return ";".join(libraries)
 
     def _fetch_fabric_metadata(self):
         """获取Fabric加载器元数据"""
+        log(f"正在获取 Fabric 加载器元数据...")
         fabric_url = f"https://meta.fabricmc.net/v2/versions/loader/{self.version}/{self.loader_version}/profile/json"
         response = requests.get(fabric_url)
         response.raise_for_status()
+        log(f"获取完成: {response.json}")
         return response.json()
 
     def _check_library_compatibility(self, lib):
         """检查库兼容性规则"""
+        log(f"正在检查库 {lib['name']} 的兼容性规则...")
         rules = lib.get("rules", [])
         if not rules:
             return True
@@ -94,33 +113,41 @@ class MinecraftLauncherGenerator:
             if os_match and arch_match:
                 applicable = True
                 allow = (rule["action"] == "allow")
+        
+        log(f"库 {lib['name']} 的兼容性规则结果: {allow}")
 
         return allow if applicable else True  # 默认允许未匹配规则的库
 
     def _download_file(self, url, target_path, sha1=None):
         """通用文件下载方法"""
+        log(f"正在下载 {url} 到 {target_path}")
         target_path.parent.mkdir(parents=True, exist_ok=True)
         if target_path.exists():
             if sha1:
                 existing_hash = hashlib.sha1(target_path.read_bytes()).hexdigest()
                 if existing_hash == sha1:
                     return
+                log(f"文件已损坏, 正在删除: {target_path}", "Warning")
                 target_path.unlink()  # 删除损坏的文件
 
         response = requests.get(url)
         response.raise_for_status()
         content = response.content
-
+        
         # 哈希校验
         if sha1:
+            log(f"正在校验 {target_path} 的哈希值...")
             file_hash = hashlib.sha1(content).hexdigest()
             if file_hash != sha1:
+                log(f"文件校验失败: {target_path} (预期: {sha1} 实际: {file_hash})", "Error")
                 raise ValueError(f"文件校验失败: {target_path} (预期: {sha1} 实际: {file_hash})")
 
         target_path.write_bytes(content)
+        log(f"下载完成: {target_path}")
 
     def generate_launch_script(self):
         """生成启动命令"""
+        log("开始生成 Minecraft 启动脚本...")
         uuid = hashlib.md5("Player".encode()).hexdigest()
         uuid = f"{uuid[:8]}-{uuid[8:12]}-{uuid[12:16]}-{uuid[16:20]}-{uuid[20:]}"
 
@@ -145,6 +172,8 @@ class MinecraftLauncherGenerator:
         if self.loader_type == "fabric":
             game_args.extend(["--launchTarget", "fabric-client"])
 
+        log("生成完成！")
+
         return {
             "java_path": str(self.java_path),
             "jvm_args": jvm_args,
@@ -153,9 +182,12 @@ class MinecraftLauncherGenerator:
 
     def generate_install_script(self):
         """生成安装脚本"""
+        log("开始安装 Minecraft 游戏文件...")
+        
         # 创建基础目录
         (self.minecraft_dir / "versions" / self.version).mkdir(parents=True, exist_ok=True)
         (self.minecraft_dir / "assets" / "objects").mkdir(parents=True, exist_ok=True)
+        log("基础目录创建完成.")
         
         # 下载客户端JAR
         client_jar = self.minecraft_dir / "versions" / self.version / f"{self.version}.jar"
@@ -164,14 +196,16 @@ class MinecraftLauncherGenerator:
             client_jar,
             self.client_download["sha1"]
         )
-
+        log("客户端JAR文件下载完成.")
+        
         # 下载资源索引
         asset_index_file = self.minecraft_dir / "assets" / "indexes" / f"{self.asset_index}.json"
         self._download_file(
             self.version_meta["assetIndex"]["url"],
             asset_index_file
         )
-
+        log("资源索引文件下载完成.")
+        
         # 下载所有资源文件
         with open(asset_index_file, "r", encoding="utf-8") as f:
             assets = json.load(f)["objects"]
@@ -180,7 +214,8 @@ class MinecraftLauncherGenerator:
                 url = f"https://resources.download.minecraft.net/{hash_[:2]}/{hash_}"
                 path = self.minecraft_dir / "assets" / "objects" / hash_[:2] / hash_
                 self._download_file(url, path, hash_)
-
+        log("所有资源文件下载完成.")
+        
         # 下载原生库文件
         for lib in self.version_meta["libraries"]:
             if not self._check_library_compatibility(lib):
@@ -203,7 +238,8 @@ class MinecraftLauncherGenerator:
                     classifier = lib["downloads"]["classifiers"][natives[platform_key]]
                     native_path = self.minecraft_dir / "libraries" / classifier["path"]
                     self._download_file(classifier["url"], native_path, classifier["sha1"])
-
+        log("所有库文件下载完成.")
+        
         # 处理Fabric加载器
         if self.loader_type == "fabric":
             fabric_meta = self._fetch_fabric_metadata()
@@ -216,9 +252,12 @@ class MinecraftLauncherGenerator:
                     
                 url = f"https://maven.fabricmc.net/{group.replace('.', '/')}/{artifact}/{version}/{jar_name}"
                 self._download_file(url, lib_path, lib.get("sha1"))
+        log("Fabric加载器处理完成.")
+        log("安装脚本生成完成.")
 
     def _detect_java(self):
         """自动检测Java 17+路径"""
+        log("正在自动检测Java 17+路径...")
         # 检查JAVA_HOME
         if java_home := os.environ.get("JAVA_HOME"):
             possible_paths = [
@@ -227,21 +266,25 @@ class MinecraftLauncherGenerator:
             ]
             for path in possible_paths:
                 if path.exists():
+                    log(f"已自动检测到Java 17+路径：{path}")
                     return path
 
         # 平台特定搜索
         if sys.platform == "win32":
+            log("正在使用Windows平台特定搜索...")
             search_paths = [
                 Path("C:/Program Files/Java/jdk-17/bin/java.exe"),
                 Path("C:/Program Files/Java/jdk-21/bin/java.exe"),
                 Path("C:/Program Files (x86)/Java/jdk-17/bin/java.exe")
             ]
         elif sys.platform == "darwin":
+            log("正在使用macOS平台特定搜索...")
             search_paths = [
                 Path("/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home/bin/java"),
                 Path("/usr/local/opt/openjdk@17/bin/java")
             ]
         else:  # Linux
+            log("正在使用Linux平台特定搜索...")
             search_paths = [
                 Path("/usr/lib/jvm/java-17-openjdk/bin/java"),
                 Path("/usr/lib/jvm/java-21-openjdk/bin/java")
@@ -249,9 +292,11 @@ class MinecraftLauncherGenerator:
 
         for path in search_paths:
             if path.exists():
+                log(f"已自动检测到Java 17+路径：{path}")
                 return path
 
         # 尝试PATH环境变量
+        log("正在尝试PATH环境变量...")
         try:
             result = subprocess.run(
                 ["java", "-version"],
@@ -259,21 +304,28 @@ class MinecraftLauncherGenerator:
                 stdout=subprocess.DEVNULL
             )
             if "17" in result.stderr.decode() or "21" in result.stderr.decode():
+                log("已自动检测到Java 17+路径：java")
                 return Path("java")
         except Exception:
             pass
-
+        
+        log("未找到Java 17或更高版本，请安装JDK并设置JAVA_HOME", "Error")
         raise RuntimeError("未找到Java 17或更高版本，请安装JDK并设置JAVA_HOME")
 
 if __name__ == "__main__":
+    log("正在启动Minecraft启动器生成器...")
+    
     # 使用示例：生成1.20.4 Fabric启动配置
     launcher = MinecraftLauncherGenerator(
         version="1.20.4",
         loader_type="fabric",
         loader_version="0.15.11"
     )
+    log("开始生成安装Minecraft..")
     launcher.generate_install_script()
+    log("安装Minecraft完成，开始生成启动脚本...")
     config = launcher.generate_launch_script()
     
     print("启动命令：")
     print(f"{config['java_path']} {' '.join(config['jvm_args'])} {' '.join(config['game_args'])}")
+    log("启动器生成完成.")
