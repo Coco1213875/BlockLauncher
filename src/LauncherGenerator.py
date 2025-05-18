@@ -10,12 +10,19 @@ from datetime import datetime
 
 
 
+with open("BL.log", "w") as f:
+    f.write(f"-----====***[{datetime.now().strftime("%H%M%S")}]开始记录log***====-----\n")
+
 def log(message, mode="Info"):
+    timestamp = datetime.now().strftime("%H%M%S")
     try :
-        timestamp = datetime.now().strftime("%H:%M:%S")
         print(f"[{timestamp}] | [{mode}] {message}", flush=True)
+        with open("BL.log", "a") as f:
+            f.write(f"[{timestamp}] | [{mode}] {message}\n")
     except Exception as e:
         print(f"[{timestamp}] | [Error] 错误地引用log函数: {e}", flush=True)
+        with open("BL.log", "a") as f:
+            f.write(f"[{timestamp}] | [Error] 错误地引用log函数: {e}\n")
 
 class MinecraftLauncherGenerator:
     def __init__(self, version, loader_type="vanilla", loader_version=None):
@@ -309,8 +316,8 @@ class MinecraftLauncherGenerator:
         except Exception:
             pass
         
-        log("未找到Java 17或更高版本，请安装JDK并设置JAVA_HOME", "Error")
-        raise RuntimeError("未找到Java 17或更高版本，请安装JDK并设置JAVA_HOME")
+        log("未找到Java 17或更高版本, 请安装JDK并设置JAVA_HOME", "Error")
+        raise RuntimeError("未找到Java 17或更高版本, 请安装JDK并设置JAVA_HOME")
 
 if __name__ == "__main__":
     log("正在启动Minecraft启动器生成器...")
@@ -323,9 +330,9 @@ if __name__ == "__main__":
     )
     log("开始生成安装Minecraft..")
     launcher.generate_install_script()
-    log("安装Minecraft完成，开始生成启动脚本...")
+    log("安装Minecraft完成, 开始生成启动脚本...")
     config = launcher.generate_launch_script()
     
     print("启动命令：")
     print(f"{config['java_path']} {' '.join(config['jvm_args'])} {' '.join(config['game_args'])}")
-    log("启动器生成完成.")
+    log("启动脚本生成完成.")
