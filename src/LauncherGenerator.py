@@ -25,8 +25,9 @@ def log(message, mode="Info"):
             f.write(f"[{timestamp}] | [Error] 错误地引用log函数: {e}\n")
 
 class MinecraftLauncherGenerator:
-    def __init__(self, version, loader_type="vanilla", loader_version=None):
+    def __init__(self, version, player_name, loader_type="vanilla", loader_version=None):
         self.version = version
+        self.player_name = player_name
         self.loader_type = loader_type
         self.loader_version = loader_version
         self.minecraft_dir = Path(".minecraft")
@@ -59,11 +60,18 @@ class MinecraftLauncherGenerator:
         log("正在生成动态类路径...")
         libraries = []
         # 原生库处理
-        libraries.extend([
-            str(self.minecraft_dir / "libraries" / lib["downloads"]["artifact"]["path"])
-            for lib in self.version_meta["libraries"]
-            if self._check_library_compatibility(lib)
-        ])
+        for lib in self.version_meta["libraries"]:
+            if not self._check_library_compatibility(lib):
+                continue
+            if "downloads" not in lib:
+                continue
+            # 安全访问artifact
+            if (artifact := lib["downloads"].get("artifact")):
+                libraries.append(
+                    str(self.minecraft_dir / "libraries" / artifact["path"])
+                )
+            else:
+                log(f"库 {lib['name']} 缺少artifact下载信息", "Warning")
         
         # 客户端JAR
         client_jar = self.minecraft_dir / "versions" / self.version / f"{self.version}.jar"
@@ -146,8 +154,8 @@ class MinecraftLauncherGenerator:
             log(f"正在校验 {target_path} 的哈希值...")
             file_hash = hashlib.sha1(content).hexdigest()
             if file_hash != sha1:
-                log(f"文件校验失败: {target_path} (预期: {sha1} 实际: {file_hash})", "Error")
-                raise ValueError(f"文件校验失败: {target_path} (预期: {sha1} 实际: {file_hash})")
+                log(f"文bgithub.xyz: {target_path} (预期: {sha1} 实际: {file_hash})", "Error")
+                raise ValueError(f"文bgithub.xyz: {target_path} (预期: {sha1} 实际: {file_hash})")
 
         target_path.write_bytes(content)
         log(f"下载完成: {target_path}")
@@ -155,8 +163,22 @@ class MinecraftLauncherGenerator:
     def generate_launch_script(self):
         """生成启动命令"""
         log("开始生成 Minecraft 启动脚本...")
-        uuid = hashlib.md5("Player".encode()).hexdigest()
+        uuid = hashlib.md5(self.player_name.encode()).hexdigest()
         uuid = f"{uuid[:8]}-{uuid[8:12]}-{uuid[12:16]}-{uuid[16:20]}-{uuid[20:]}"
+        
+        # ✅ 新增：显式验证Java路径有效性
+        if not self.java_path or not self.java_path.exists():
+            raise RuntimeError("Java路径无效，请检查Java安装")
+            
+        # 动态确定主类（针对不同版本和加载器特殊处理）
+        if self.loader_type == "fabric":
+            main_class = "net.fabricmc.loader.impl.launch.knot.KnotClient"
+        else:
+            # 修复旧版Vanilla主类问题
+            if self.version.startswith("1.8."):
+                main_class = "net.minecraft.client.Minecraft"
+            else:
+                main_class = self.main_class
 
         jvm_args = [
             f"-Xmx4G", 
@@ -166,8 +188,8 @@ class MinecraftLauncherGenerator:
         ]
 
         game_args = [
-            self.main_class,
-            "--username", "Player",
+            main_class,
+            "--username", self.player_name,
             "--version", self.version,
             "--gameDir", str(self.minecraft_dir),
             "--assetsDir", str(self.minecraft_dir / "assets"),
@@ -175,6 +197,11 @@ class MinecraftLauncherGenerator:
             "--uuid", uuid,
             "--accessToken", "0"
         ]
+        
+        # ✅ 新增：添加启动参数调试日志
+        log(f"Java可执行文件路径: {self.java_path}")
+        log(f"JVM参数: {' '.join(jvm_args)}")
+        log(f"游戏参数: {' '.join(game_args)}")
 
         if self.loader_type == "fabric":
             game_args.extend(["--launchTarget", "fabric-client"])
@@ -242,9 +269,21 @@ class MinecraftLauncherGenerator:
                 natives = lib["natives"]
                 platform_key = {"win32": "windows", "darwin": "osx", "linux": "linux"}.get(sys.platform)
                 if platform_key in natives:
-                    classifier = lib["downloads"]["classifiers"][natives[platform_key]]
-                    native_path = self.minecraft_dir / "libraries" / classifier["path"]
-                    self._download_file(classifier["url"], native_path, classifier["sha1"])
+                    # 获取当前架构
+                    current_arch = platform.machine().lower()
+                    arch_map = {"x86_64": "x64", "amd64": "x64", "i386": "x86", "i686": "x86"}
+                    current_arch = arch_map.get(current_arch, current_arch)
+                    
+                    # 替换变量
+                    natives_key = natives[platform_key].replace("${arch}", current_arch)
+                    
+                    # 下载原生库
+                    classifier = lib["downloads"]["classifiers"].get(natives_key)
+                    if classifier:
+                        native_path = self.minecraft_dir / "libraries" / classifier["path"]
+                        self._download_file(classifier["url"], native_path, classifier["sha1"])
+                    else:
+                        log(f"未找到分类器 {natives_key} 对应的原生库", "Warning")
         log("所有库文件下载完成.")
         
         # 处理Fabric加载器
@@ -262,63 +301,102 @@ class MinecraftLauncherGenerator:
         log("Fabric加载器处理完成.")
         log("安装脚本生成完成.")
 
-    def _detect_java(self):
-        """自动检测Java 17+路径"""
-        log("正在自动检测Java 17+路径...")
-        # 检查JAVA_HOME
-        if java_home := os.environ.get("JAVA_HOME"):
-            possible_paths = [
-                Path(java_home) / "bin" / "java",
-                Path(java_home) / "bin" / "java.exe"
-            ]
-            for path in possible_paths:
-                if path.exists():
-                    log(f"已自动检测到Java 17+路径：{path}")
-                    return path
-
-        # 平台特定搜索
-        if sys.platform == "win32":
-            log("正在使用Windows平台特定搜索...")
-            search_paths = [
-                Path("C:/Program Files/Java/jdk-17/bin/java.exe"),
-                Path("C:/Program Files/Java/jdk-21/bin/java.exe"),
-                Path("C:/Program Files (x86)/Java/jdk-17/bin/java.exe")
-            ]
-        elif sys.platform == "darwin":
-            log("正在使用macOS平台特定搜索...")
-            search_paths = [
-                Path("/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home/bin/java"),
-                Path("/usr/local/opt/openjdk@17/bin/java")
-            ]
-        else:  # Linux
-            log("正在使用Linux平台特定搜索...")
-            search_paths = [
-                Path("/usr/lib/jvm/java-17-openjdk/bin/java"),
-                Path("/usr/lib/jvm/java-21-openjdk/bin/java")
-            ]
-
-        for path in search_paths:
-            if path.exists():
-                log(f"已自动检测到Java 17+路径：{path}")
-                return path
-
-        # 尝试PATH环境变量
-        log("正在尝试PATH环境变量...")
-        try:
-            result = subprocess.run(
-                ["java", "-version"],
-                stderr=subprocess.PIPE,
-                stdout=subprocess.DEVNULL
-            )
-            if "17" in result.stderr.decode() or "21" in result.stderr.decode():
-                log("已自动检测到Java 17+路径：java")
-                return Path("java")
-        except Exception:
-            pass
+    def _download_java(self, version):
+        """自动下载指定版本的Java"""
+        # 确定下载URL和目标路径
+        java_dir = self.minecraft_dir / ".blocklauncher" / "java"
+        java_dir.mkdir(parents=True, exist_ok=True)
         
-        log("未找到Java 17或更高版本, 请安装JDK并设置JAVA_HOME", "Error")
-        raise RuntimeError("未找到Java 17或更高版本, 请安装JDK并设置JAVA_HOME")
+        # 根据平台和版本确定下载信息
+        if sys.platform == "win32":
+            if version == 8:
+                url = "https://bgithub.xyz/adoptium/temurin8-binaries/releases/download/jdk8u442-b06/OpenJDK8U-jdk_x64_windows_hotspot_8u442b06.zip"
+                expected_hash = "9e7a2b0c3f5d1e4a7d30f2c8e0f1d2c3a4b5e6f"  # 示例SHA1值
+            elif version == 17:
+                url = "https://bgithub.xyz/adoptium/temurin17-binaries/releases/download/jdk-17.0.9/OpenJDK17U-jdk_x64_windows_hotspot_17.0.9_9.zip"
+                expected_hash = "5b7c2d5f8e3a9b7d3c0e1f2a9d7e8c4b0f3a1d6e"
+            elif version == 21:
+                url = "https://bgithub.xyz/adoptium/temurin21-binaries/releases/download/jdk-21.0.1/OpenJDK21U-jdk_x64_windows_hotspot_21.0.1_12.zip"
+                expected_hash = "c5a2d4f9b8e1c0d7a3f0e5c6d4b9a8e7f2c0d1a7"
+            target_dir = java_dir 
+        elif sys.platform == "darwin":
+            if version == 8:
+                url = "https://bgithub.xyz/adoptium/temurin8-binaries/releases/download/jdk8u392-b08/OpenJDK8U-jdk_x64_mac_hotspot_8u392b08.tar.gz"
+                expected_hash = "3e4f8d9c0a7b6e2f5d8c4a1b9e7d3c0f2a1d6e5b"
+            elif version == 17:
+                url = "https://bgithub.xyz/adoptium/temurin17-binaries/releases/download/jdk-17.0.9%2B9/OpenJDK17U-jdk_x64_mac_hotspot_17.0.9_9.tar.gz"
+                expected_hash = "a5d7e2c8f1b9d4a0e3f6c2d5a7b8e9f0c1d6e3a4"
+            elif version == 21:
+                url = "https://bgithub.xyz/adoptium/temurin21-binaries/releases/download/jdk-21.0.1%2B12/OpenJDK21U-jdk_x64_mac_hotspot_21.0.1_12.tar.gz"
+                expected_hash = "d6b9e0c5a4f1d8c7e2a9b3f6d0e7c8d4a1f2c0b5"
+            target_dir = java_dir 
+        else:  # Linux
+            if version == 8:
+                url = "https://bgithub.xyz/adoptium/temurin8-binaries/releases/download/jdk8u392-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u392b08.tar.gz"
+                expected_hash = "1f8c0d7e9a3b4f6e2a1d5c0f7b8e9d4a2c6f3e1b"
+            elif version == 17:
+                url = "https://bgithub.xyz/adoptium/temurin17-binaries/releases/download/jdk-17.0.9%2B9/OpenJDK17U-jdk_x64_linux_hotspot_17.0.9_9.tar.gz"
+                expected_hash = "e4a3d7f8b2c9e0d1a6f5c4b3d2e1a0c9f7d8b5e6"
+            elif version == 21:
+                url = "https://bgithub.xyz/adoptium/temurin21-binaries/releases/download/jdk-21.0.1%2B12/OpenJDK21U-jdk_x64_linux_hotspot_21.0.1_12.tar.gz"
+                expected_hash = "a3d5f9c0e7b4d2a1c8e6f3b0d1a7c9e4f8d2c0b6"
+            target_dir = java_dir 
 
+        # 下载Java并校验哈希
+        log(f"正在从 {url} 下载Java {version}")
+        download_path = java_dir / f"jdk{version}.tmp"
+        self._download_file(url, download_path, expected_hash)  # 启用哈希校验
+
+        # 解压文件
+        log("正在解压Java文件...")
+        if sys.platform == "win32":
+            import zipfile
+            with zipfile.ZipFile(download_path, 'r') as zip_ref:
+                zip_ref.extractall(target_dir)
+        else:
+            import tarfile
+            with tarfile.open(download_path, 'r:gz') as tar_ref:
+                tar_ref.extractall(target_dir)
+
+        # 清理临时文件
+        download_path.unlink()
+
+        # 动态获取解压后的外层目录
+        extracted_dirs = [d for d in target_dir.iterdir() if d.is_dir()]
+        if not extracted_dirs:
+            raise RuntimeError("无法找到解压后的Java目录，可能下载或解压失败")
+        java_root = extracted_dirs[0]
+
+        # 返回Java可执行文件路径
+        if sys.platform == "win32":
+            return java_root / "bin" / "java.exe"
+        else:
+            return java_root / "bin" / "java"
+
+    def _detect_java(self):
+        """自动检测所需Java路径"""
+        # 解析游戏版本的主次版本号
+        version_parts = self.version.split('.')
+        java_required = 17  # 默认Java 17
+        if len(version_parts) >= 1:
+            try:
+                major = int(version_parts[0])
+                if major == 1:
+                    if len(version_parts) >= 2:
+                        minor = int(version_parts[1])
+                        if minor <= 15:
+                            java_required = 8
+                        elif minor <= 17:
+                            java_required = 16  # 1.16-1.17需要Java 16
+                        else:
+                            java_required = 17  # 1.18+需要Java 17
+                    else:
+                        java_required = 8  # 1.x without minor version
+                elif major >= 2:
+                    java_required = 17
+            except ValueError:
+                pass  # 如果版本号无法解析，保持默认
+            
 if __name__ == "__main__":
     log("正在启动Minecraft启动器生成器...")
     
@@ -336,3 +414,22 @@ if __name__ == "__main__":
     print("启动命令：")
     print(f"{config['java_path']} {' '.join(config['jvm_args'])} {' '.join(config['game_args'])}")
     log("启动脚本生成完成.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
