@@ -1,20 +1,24 @@
-# main_window.py
 import sys
+import os
+import subprocess
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QLabel, QLineEdit, QComboBox, QPushButton,
                             QStatusBar, QTabWidget, QFrame, QMessageBox)
 from PyQt5.QtCore import Qt
-from style_sheet import white, black
+from style_sheet import *
 from LauncherGenerator import MinecraftLauncherGenerator
 
-class BlockLaunchUI(QMainWindow):
+class BlockLauncherUI(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("BlockLaunch")
+        self.setWindowTitle("BlockLauncher")
         self.setMinimumSize(800, 500)
-        self.launcher = MinecraftLauncherGenerator(version="", player_name="")
+        self.launcher = MinecraftLauncherGenerator(
+            version="1.20.1",
+            player_name=""
+        )
         self.init_ui()
-        self.apply_style('dark')
+        self.apply_theme('white') 
 
     def init_ui(self):
         # 主容器
@@ -36,6 +40,11 @@ class BlockLaunchUI(QMainWindow):
         self.generate_btn = QPushButton("生成启动脚本")
         self.generate_btn.clicked.connect(self.generate_script)
         main_layout.addWidget(self.generate_btn, 0, Qt.AlignBottom)
+        
+        # 新增：启动游戏按钮
+        self.run_btn = QPushButton("启动游戏")
+        self.run_btn.clicked.connect(self.run_game)
+        main_layout.addWidget(self.run_btn, 0, Qt.AlignBottom)  # 并列放置
 
         # 状态栏
         self.status_bar = QStatusBar()
@@ -94,11 +103,8 @@ class BlockLaunchUI(QMainWindow):
         elif loader_type == "Forge":
             self.loader_version_combo.addItems(["47.1.3", "43.2.0", "40.2.9"])
         else:
-            self.loader_version_combo.setEnabled(False)
-
-    def apply_style(self, theme='light'):
-        style = white if theme == 'light' else black
-        self.setStyleSheet(style)
+            # self.loader_version_combo.setEnabled(False)
+            self.loader_version_combo.addItems(["无"])
 
     def generate_script(self):
         try:
@@ -111,7 +117,7 @@ class BlockLaunchUI(QMainWindow):
             # 验证输入
             if not player_name:
                 raise ValueError("玩家名称不能为空")
-            if loader_type != "无" and not loader_version:
+            if loader_type != "无" and not loader_version and loader_type != "原版":
                 raise ValueError("请选择加载器版本")
 
             # 配置启动器
@@ -135,6 +141,58 @@ class BlockLaunchUI(QMainWindow):
         except Exception as e:
             self.status_bar.showMessage(f"❌ 错误：{str(e)}", 5000)
             QMessageBox.critical(self, "错误", str(e))
+    
+    def apply_theme(self, theme_name='white'):
+        # 获取资源目录（基于应用程序运行目录）
+        icon_path = os.path.join(QApplication.applicationDirPath(), 'resources', 'icons')
+        
+        # 验证主题有效性
+        if theme_name not in ['white', 'black']:
+            raise ValueError(f"Unsupported theme: {theme_name}. Available themes: 'white', 'black'")
+        
+        # 定义主题资源映射
+        theme_resources = {
+            'white': {
+                'check_mark': os.path.join(icon_path, 'checkmark_white.png'),
+                'drop_down_arrow': os.path.join(icon_path, 'dropdown_arrow_white.png'),
+                'scroll_bar_top': os.path.join(icon_path, 'scroll_up_white.png'),
+                'scroll_bar_bottom': os.path.join(icon_path, 'scroll_down_white.png'),
+                'scroll_bar_left': os.path.join(icon_path, 'scroll_left_white.png'),
+                'scroll_bar_right': os.path.join(icon_path, 'scroll_right_white.png')
+            },
+            'black': {
+                'check_mark': os.path.join(icon_path, 'checkmark_black.png'),
+                'drop_down_arrow': os.path.join(icon_path, 'dropdown_arrow_black.png'),
+                'scroll_bar_top': os.path.join(icon_path, 'scroll_up_black.png'),
+                'scroll_bar_bottom': os.path.join(icon_path, 'scroll_down_black.png'),
+                'scroll_bar_left': os.path.join(icon_path, 'scroll_left_black.png'),
+                'scroll_bar_right': os.path.join(icon_path, 'scroll_right_black.png')
+            }
+        }
+        
+        # 获取对应样式模板
+        style_templates = {
+            'white': white,
+            'black': black
+        }
+        
+        try:
+            # 生成样式表并应用
+            theme_style = style_templates[theme_name].format(**theme_resources[theme_name])
+            self.setStyleSheet(theme_style)
+        except KeyError as e:
+            raise RuntimeError(f"Missing resource for {theme_name} theme: {e}") from e
+
+    def run_game(self):
+        """生成并执行启动脚本"""
+        try:
+            # 先生成脚本
+            self.generate_script()
+            # 执行脚本
+            subprocess.Popen(["launch.bat"], shell=True)
+        except Exception as e:
+            # 复用原有错误处理机制
+            pass  # generate_script已处理异常
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
