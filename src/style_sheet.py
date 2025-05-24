@@ -1,499 +1,261 @@
-# 保持原有内容不变，仅增加文档说明
+# style_sheet.py
 """
-样式表模块，提供两种主题：'white'和'black'
+样式表模块，提供两种主题：'light'和'dark'
 使用apply_theme(theme_name)函数应用主题
-主题资源文件需存放在resources/icons目录下
+主题资源文件需存放在src/resources/icons目录下
 """
-# 注：这里用的是 https://github.com/dyang886/Game-Cheats-Manager/ 项目的QSS
-# 具体路径为 https://github.com/dyang886/Game-Cheats-Manager/blob/main/src/scripts/style_sheet.py
-# 该项目使用的标准为 GNU v3.0 , 所以可以商用, 修改, 分配, 专利使用, 私人使用
 
-white = """
+light = """
+    /* 基础样式 */
     QMainWindow {{
-        background-color: #ffffff;
+        background-color: #f5f5f5;
     }}
-
-    QStatusBar::item {{
-        border: none;
-    }}
-
-    QMenuBar {{
-        background-color: #f9f9f9;
-    }}
-
-    QMenuBar::item {{
-        background-color: #f9f9f9;
-        color: #000000;
-        padding: 5px;
-    }}
-
-    QMenuBar::item:selected {{
-        background-color: #e6e6e6;
-    }}
-
-    QMenu {{
-        background-color: #ffffff;
-        border: 2px solid #000000;
-        border-radius: 5px;
-    }}
-
-    QMenu::item {{
-        background-color: #ffffff;
-        color: #000000;
-    }}
-
-    QMenu::item:selected {{
-        background-color: #e6e6e6;
-    }}
-
+    
     QStatusBar {{
-        color: black;
+        background-color: #e0e0e0;
+        color: #333333;
+        font-family: "微软雅黑";
+        font-size: 9pt;
     }}
 
-    QCheckBox {{
-        color: black;
+    /* 侧边栏样式 */
+    QWidget#sidebar {{
+        background-color: #f0f0f0;
+        border-right: 1px solid #cccccc;
+    }}
+    
+    QPushButton {{
+        text-align: left; 
+        padding-left: 15px;
+        border: none;
+        border-radius: 4px;
+        background-color: transparent;
+        color: #333333;
+        font-family: "微软雅黑";
+        font-size: 13px;
+    }}
+    
+    QPushButton:hover {{
+        background-color: #e6e6e6;
+    }}
+    
+    QPushButton:pressed {{
+        background-color: #d9d9d9;
     }}
 
-    QCheckBox::indicator {{
-        width: 16px;
-        height: 16px;
+    /* 游戏列表项 */
+    QWidget[class="game-item"] {{
+        background-color: white;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+    }}
+    
+    QLabel[class="title"] {{
+        font-family: "微软雅黑";
+        font-size: 14px;
+        font-weight: bold;
+        color: #333333;
+    }}
+    
+    QLabel[class="subtitle"] {{
+        font-family: "微软雅黑";
+        font-size: 12px;
+        color: #666666;
+    }}
+    
+    QLabel[class="info"] {{
+        font-family: "微软雅黑";
+        font-size: 11px;
+        color: #999999;
+    }}
+
+    /* 滚动区域 */
+    QScrollArea {{
+        border: none;
         border-radius: 5px;
+        background: transparent;
     }}
-
-    QCheckBox::indicator:unchecked {{
-        background-color: #ffffff;
+    
+    /* 按钮样式 */
+    QPushButton[class="launch-btn"] {{
+        background-color: #4CAF50;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 5px;
+        font-family: "微软雅黑";
+        font-size: 12px;
+    }}
+    
+    QPushButton[class="option-btn"] {{
+        background-color: #f0f0f0;
+        color: #666666;
+        padding: 6px 12px;
         border: 1px solid #cccccc;
+        border-radius: 4px;
+        font-family: "微软雅黑";
+        font-size: 11px;
     }}
-
-    QCheckBox::indicator:checked {{
-        background-color: #0057b7;
-        border: 1px solid #bbbbbb;
-        image: url({check_mark});
-    }}
-
-    QPushButton {{
-        padding: 7px;
-        border-radius: 3px;
-        border: 1px solid #dddddd;
-        background-color: #f9f9f9;
-        color: #000000;
-        outline: none;
-    }}
-
-    QPushButton:hover {{
-        background-color: #f2f2f2;
-    }}
-
-    QPushButton:pressed {{
-        background-color: #e6e6e6;
-    }}
-
-    QComboBox {{
-        padding: 7px;
-        border-radius: 3px;
-        border: 1px solid #dddddd;
-        background-color: #f9f9f9;
-        color: #000000;
-    }}
-
-    QComboBox::drop-down {{
-        border: 0px;
-        padding-right: 10px;
-    }}
-
-    QComboBox::down-arrow {{
-        image: url({drop_down_arrow});
-        width: 10px;
-    }}
-
-    QComboBox QAbstractItemView {{
-        background-color: #f9f9f9;
-        color: #000000;
-        border: 1px solid #dddddd;
-    }}
-
-    QDialog {{
-        background-color: #ffffff;
-    }}
-
-    QLabel {{
-        color: #000000;
-    }}
-
-    QLineEdit {{
-        background-color: #f9f9f9;
-        color: #000000;
-        border: 1px solid #dddddd;
-        border-radius: 3px;
-        padding: 6px;
-    }}
-
-    QLineEdit:focus {{
-        border-bottom: 2px solid #0057b7;
-    }}
-
-    QListWidget {{
-        border: 1px solid #bfbfbf;
-        border-radius: 3px;
-        background-color: #ffffff;
-        color: #000000;
-    }}
-
-    QScrollBar:vertical {{
-        background-color: #f0f0f0;
-        width: 15px;
-        margin: 15px 0 15px 0;
-    }}
-
-    QScrollBar::handle:vertical {{
-        background-color: #cccccc;
-        min-height: 20px;
-        border-radius: 3px;
-        margin: 0 4px 0 4px;
-    }}
-
-    QScrollBar::handle:vertical:hover {{
-        background-color: #d6d6d6;
-    }}
-
-    QScrollBar::handle:vertical:pressed {{
-        background-color: #bfbfbf;
-    }}
-
-    QScrollBar::sub-line:vertical {{
-        image: url({scroll_bar_top});
-        background-color: #f0f0f0;
-        height: 15px;
-        border-top-left-radius: 7px;
-        border-top-right-radius: 7px;
-        subcontrol-position: top;
-        subcontrol-origin: margin;
-    }}
-
-    QScrollBar::add-line:vertical {{
-        image: url({scroll_bar_bottom});
-        background-color: #f0f0f0;
-        height: 15px;
-        border-bottom-left-radius: 7px;
-        border-bottom-right-radius: 7px;
-        subcontrol-position: bottom;
-        subcontrol-origin: margin;
-    }}
-
-    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-        background: none;
-    }}
-
-    QScrollBar:horizontal {{
-        background-color: #f0f0f0;
-        height: 15px;
-        margin: 0 15px 0 15px;
-    }}
-
-    QScrollBar::handle:horizontal {{
-        background-color: #cccccc;
-        min-width: 20px;
-        border-radius: 3px;
-        margin: 4px 0 4px 0;
-    }}
-
-    QScrollBar::handle:horizontal:hover {{
-        background-color: #d6d6d6;
-    }}
-
-    QScrollBar::handle:horizontal:pressed {{
-        background-color: #bfbfbf;
-    }}
-
-    QScrollBar::sub-line:horizontal {{
-        image: url({scroll_bar_left});
-        background-color: #f0f0f0;
-        width: 15px;
-        border-top-left-radius: 7px;
-        border-bottom-left-radius: 7px;
-        subcontrol-position: left;
-        subcontrol-origin: margin;
-    }}
-
-    QScrollBar::add-line:horizontal {{
-        image: url({scroll_bar_right});
-        background-color: #f0f0f0;
-        width: 15px;
-        border-top-right-radius: 7px;
-        border-bottom-right-radius: 7px;
-        subcontrol-position: right;
-        subcontrol-origin: margin;
-    }}
-
-    QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
-        background: none;
-    }}
-
-    QTabWidget::pane {{
-        border-top: 2px solid #cccccc;
-    }}
-
-    QTabBar::tab {{
-        background-color: #f9f9f9;
-        color: #000000;
-        padding: 10px;
-        border-radius: 3px;
-    }}
-
-    QTabBar::tab:hover {{
-        background-color: #f2f2f2;
-    }}
-
-    QTabBar::tab:selected {{
-        background-color: #e6e6e6;
-        color: #000000;
-        font-weight: bold;
-        border-bottom: 2px solid #0057b7;
-    }}
-"""
-
-black = """
-    QMainWindow {{
-        background-color: #1c1c1c;
-    }}
-
-    QStatusBar::item {{
-        border: none;
-    }}
-
+    
+    /* 菜单样式 */
     QMenuBar {{
-        background-color: #2e2e2e;
+        background-color: #f5f5f5;
+        border-bottom: 1px solid #e0e0e0;
+        font-family: "微软雅黑";
     }}
-
-    QMenuBar::item {{
-        background-color: #2e2e2e;
-        color: #FFFFFF;
-        padding: 5px;
-    }}
-
-    QMenuBar::item:selected {{
-        background-color: #484848;
-    }}
-
+    
     QMenu {{
-        background-color: #1c1c1c;
-        border: 2px solid #ffffff;
-        border-radius: 5px;
+        background-color: white;
+        border: 1px solid #e0e0e0;
+        padding: 8px 0;
+        font-family: "微软雅黑";
     }}
-
+    
     QMenu::item {{
-        background-color: #1c1c1c;
-        color: #FFFFFF;
+        padding: 6px 24px;
     }}
-
-    QMenu::item:selected {{
-        background-color: #484848;
-    }}
-
-    QStatusBar {{
-        color: white;
-    }}
-
-    QCheckBox {{
-        color: white;
-    }}
-
-    QCheckBox::indicator {{
-        width: 16px;
-        height: 16px;
-        border-radius: 5px;
-    }}
-
-    QCheckBox::indicator:unchecked {{
-        background-color: #2a2a2a;
-        border: 1px solid #5e5e5e;
-    }}
-
-    QCheckBox::indicator:checked {{
-        background-color: #0080e3;
-        border: 1px solid #a6a6a6;
-        image: url({check_mark});
-    }}
-
-    QPushButton {{
-        padding: 7px;
-        border-radius: 3px;
-        border: 1px solid #555555;
-        background-color: #2a2a2a;
-        color: #FFFFFF;
-        outline: none;
-    }}
-
-    QPushButton:hover {{
-        background-color: #2f2f2f;
-    }}
-
-    QPushButton:pressed {{
-        background-color: #232323;
-    }}
-
-    QComboBox {{
-        padding: 7px;
-        border-radius: 3px;
-        border: 1px solid #555555;
-        background-color: #2a2a2a;
-        color: #FFFFFF;
-    }}
-
-    QComboBox::drop-down {{
-        border: 0px;
-        padding-right: 10px;
-    }}
-
-    QComboBox::down-arrow {{
-        image: url({drop_down_arrow});
-        width: 10px;
-    }}
-
-    QComboBox QAbstractItemView {{
-        background-color: #2a2a2a;
-        color: #FFFFFF;
-        border: 1px solid #555555;
-    }}
-
-    QDialog {{
-        background-color: #1c1c1c;
-    }}
-
-    QLabel {{
-        color: #FFFFFF;
-    }}
-
-    QLineEdit {{
-        background-color: #2a2a2a;
-        color: #FFFFFF;
-        border: 1px solid #555555;
-        border-radius: 3px;
-        padding: 6px;
-    }}
-
-    QLineEdit:focus {{
-        border-bottom: 2px solid #007ad9;
-    }}
-
+    
+    /* 列表样式 */
     QListWidget {{
-        border: 1px solid #a8a8a8;
-        border-radius: 3px;
-        background-color: #2a2a2a;
-        color: #ffffff;
-    }}
-
-    QScrollBar:vertical {{
-        background-color: #2f2f2f;
-        width: 15px;
-        margin: 15px 0 15px 0;
-    }}
-
-    QScrollBar::handle:vertical {{
-        background-color: #636363;
-        min-height: 20px;
-        border-radius: 3px;
-        margin: 0 4px 0 4px;
-    }}
-
-    QScrollBar::handle:vertical:hover {{
-        background-color: #6f6f6f;
-    }}
-
-    QScrollBar::handle:vertical:pressed {{
-        background-color: #5c5c5c;
-    }}
-
-    QScrollBar::sub-line:vertical {{
-        image: url({scroll_bar_top});
-        background-color: #2f2f2f;
-        height: 15px;
-        border-top-left-radius: 7px;
-        border-top-right-radius: 7px;
-        subcontrol-position: top;
-        subcontrol-origin: margin;
-    }}
-
-    QScrollBar::add-line:vertical {{
-        image: url({scroll_bar_bottom});
-        background-color: #2f2f2f;
-        height: 15px;
-        border-bottom-left-radius: 7px;
-        border-bottom-right-radius: 7px;
-        subcontrol-position: bottom;
-        subcontrol-origin: margin;
-    }}
-
-    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-        background: none;
-    }}
-
-    QScrollBar:horizontal {{
-        background-color: #2f2f2f;
-        height: 15px;
-        margin: 0 15px 0 15px;
-    }}
-
-    QScrollBar::handle:horizontal {{
-        background-color: #636363;
-        min-width: 20px;
-        border-radius: 3px;
-        margin: 4px 0 4px 0;
-    }}
-
-    QScrollBar::handle:horizontal:hover {{
-        background-color: #6f6f6f;
-    }}
-
-    QScrollBar::handle:horizontal:pressed {{
-        background-color: #5c5c5c;
-    }}
-
-    QScrollBar::sub-line:horizontal {{
-        image: url({scroll_bar_left});
-        background-color: #2f2f2f;
-        width: 15px;
-        border-top-left-radius: 7px;
-        border-bottom-left-radius: 7px;
-        subcontrol-position: left;
-        subcontrol-origin: margin;
-    }}
-
-    QScrollBar::add-line:horizontal {{
-        image: url({scroll_bar_right});
-        background-color: #2f2f2f;
-        width: 15px;
-        border-top-right-radius: 7px;
-        border-bottom-right-radius: 7px;
-        subcontrol-position: right;
-        subcontrol-origin: margin;
-    }}
-
-    QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
-        background: none;
-    }}
-
-    QTabWidget::pane {{
-        border-top: 2px solid #2e2e2e;
-    }}
-
-    QTabBar::tab {{
-        background-color: #2a2a2a;
-        color: #FFFFFF;
-        padding: 10px;
-        border-radius: 3px;
-    }}
-
-    QTabBar::tab:hover {{
-        background-color: #3a3a3a;
-    }}
-
-    QTabBar::tab:selected {{
-        background-color: #4a4a4a;
-        color: #FFFFFF;
-        font-weight: bold;
-        border-bottom: 2px solid #0080e3;
+        background-color: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        font-family: "微软雅黑";
     }}
 """
 
+dark = """
+    /* 基础样式 */
+    QMainWindow {{
+        background-color: #2d2d2d;
+    }}
+    
+    QStatusBar {{
+        background-color: #383838;
+        color: #cccccc;
+        font-family: "微软雅黑";
+        font-size: 9pt;
+    }}
 
+    /* 侧边栏样式 */
+    QWidget#sidebar {{
+        background-color: #333333;
+        border-right: 1px solid #404040;
+    }}
+    
+    QPushButton {{
+        text-align: left;
+        padding-left: 15px;
+        border: none;
+        border-radius: 4px;
+        background-color: transparent;
+        color: #cccccc;
+        font-family: "微软雅黑";
+        font-size: 13px;
+    }}
+    
+    QPushButton:hover {{
+        background-color: #404040;
+    }}
+    
+    QPushButton:pressed {{
+        background-color: #4d4d4d;
+    }}
+
+    /* 游戏列表项 */
+    QWidget[class="game-item"] {{
+        background-color: #383838;
+        border-radius: 8px;
+        border: 1px solid #404040;
+    }}
+    
+    QLabel[class="title"] {{
+        color: #ffffff;
+        font-family: "微软雅黑";
+        font-size: 14px;
+        font-weight: bold;
+    }}
+    
+    QLabel[class="subtitle"] {{
+        color: #aaaaaa;
+        font-family: "微软雅黑";
+        font-size: 12px;
+    }}
+    
+    QLabel[class="info"] {{
+        color: #888888;
+        font-family: "微软雅黑";
+        font-size: 11px;
+    }}
+
+    /* 滚动区域 */
+    QScrollArea {{
+        border: none;
+        border-radius: 5px;
+        background: transparent;
+    }}
+    
+    /* 按钮样式 */
+    QPushButton[class="launch-btn"] {{
+        background-color: #4CAF50;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 5px;
+        font-family: "微软雅黑";
+        font-size: 12px;
+    }}
+    
+    QPushButton[class="option-btn"] {{
+        background-color: #404040;
+        color: #cccccc;
+        padding: 6px 12px;
+        border: 1px solid #555555;
+        border-radius: 4px;
+        font-family: "微软雅黑";
+        font-size: 11px;
+    }}
+    
+    /* 菜单样式 */
+    QMenuBar {{
+        background-color: #333333;
+        border-bottom: 1px solid #404040;
+        font-family: "微软雅黑";
+    }}
+    
+    QMenu {{
+        background-color: #383838;
+        border: 1px solid #404040;
+        padding: 8px 0;
+        font-family: "微软雅黑";
+    }}
+    
+    QMenu::item {{
+        padding: 6px 24px;
+        color: #cccccc;
+    }}
+    
+    /* 列表样式 */
+    QListWidget {{
+        background-color: #383838;
+        border: 1px solid #404040;
+        border-radius: 6px;
+        font-family: "微软雅黑";
+    }}
+"""
+
+def apply_theme(theme_name, app):
+    """应用主题到应用程序"""
+    theme_map = {
+        "light": light,
+        "dark": dark
+    }
+    
+    if theme_name in theme_map:
+        style_sheet = theme_map[theme_name].format(
+            check_mark="src/resources/icons/check_mark.svg",
+            drop_down_arrow="src/resources/icons/arrow_down.svg",
+            scroll_bar_top="src/resources/icons/scroll_top.svg",
+            scroll_bar_bottom="src/resources/icons/scroll_bottom.svg",
+            scroll_bar_left="src/resources/icons/scroll_left.svg",
+            scroll_bar_right="src/resources/icons/scroll_right.svg"
+        )
+        app.setStyleSheet(style_sheet)
