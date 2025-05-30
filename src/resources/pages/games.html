@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>游戏库</title>
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="custom-colors.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Minecraftia&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="games-section">
+        <div class="section-header">
+            <h2>游戏库</h2>
+            <div class="filter-buttons">
+                <button class="filter-btn active">全部</button>
+                <button class="filter-btn">最近游玩</button>
+                <button class="filter-btn">已安装</button>
+                <button class="filter-btn">收藏</button>
+            </div>
+        </div>
+        <div class="games-grid" id="games-grid">
+            <!-- 游戏卡片将由JavaScript动态生成 -->
+        </div>
+    </div>
+    <div class="footer-info">
+        <div class="status-indicator">启动器状态: 运行正常</div>
+        <div>内存使用: 1.2 GB / 8 GB</div>
+        <div>版本: CraftLauncher v1.2.0</div>
+    </div>
+    <script>
+        // 加载游戏列表
+        function loadGames() {
+            if (window.getInstalledGames) {
+                const games = JSON.parse(window.getInstalledGames());
+                renderGames(games);
+            } else if (window.qt && qt.pyBridge && qt.pyBridge.getInstalledGames) {
+                qt.pyBridge.getInstalledGames(function(result) {
+                    const games = JSON.parse(result);
+                    renderGames(games);
+                });
+            } else {
+                console.error("无法获取游戏列表");
+                // 回退到静态内容
+                document.getElementById('games-grid').innerHTML = `
+                    <div class="game-card">
+                        <div class="game-banner" style="background: linear-gradient(45deg, #4CAF50, #2E7D32);">
+                            <div class="game-icon" style="background: #4CAF50;">
+                                <i class="fas fa-grass"></i>
+                            </div>
+                        </div>
+                        <div class="game-info">
+                            <div class="game-title">Minecraft 1.20.1</div>
+                            <div class="game-meta">
+                                <span>上次游玩: 2小时前</span>
+                                <span class="game-version">正式版</span>
+                            </div>
+                            <div class="game-actions">
+                                <button class="play-btn" data-game-id="1.20.1_vanilla_Steve">启动游戏</button>
+                                <button class="settings-btn">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 渲染游戏列表
+        function renderGames(games) {
+            const grid = document.getElementById('games-grid');
+            grid.innerHTML = '';
+            
+            games.forEach(game => {
+                const gameId = game.id;
+                const gameTitle = game.title || `Minecraft ${game.version} (${game.loader_type})`;
+                const lastPlayed = game.last_played || '从未游玩';
+                const version = game.loader_type === 'vanilla' ? 
+                    `正式版 ${game.version}` : `${game.loader_type} ${game.version}`;
+                
+                const card = document.createElement('div');
+                card.className = 'game-card';
+                card.innerHTML = `
+                    <div class="game-banner" style="background: linear-gradient(45deg, #4CAF50, #2E7D32);">
+                        <div class="game-icon" style="background: #4CAF50;">
+                            <i class="fas fa-grass"></i>
+                        </div>
+                    </div>
+                    <div class="game-info">
+                        <div class="game-title">${gameTitle}</div>
+                        <div class="game-meta">
+                            <span>上次游玩: ${lastPlayed}</span>
+                            <span class="game-version">${version}</span>
+                        </div>
+                        <div class="game-actions">
+                            <button class="play-btn" data-game-id="${gameId}">启动游戏</button>
+                            <button class="settings-btn">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            
+            // 绑定启动按钮事件
+            document.querySelectorAll('.play-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const gameId = this.getAttribute('data-game-id');
+                    launchGame(gameId);
+                });
+            });
+        }
+
+        // 启动游戏
+        function launchGame(gameId) {
+            const btn = document.querySelector(`.play-btn[data-game-id="${gameId}"]`);
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 启动中...';
+            btn.disabled = true;
+            
+            if (window.launchGame) {
+                window.launchGame(gameId);
+            } else if (window.qt && qt.pyBridge && qt.pyBridge.launchGame) {
+                qt.pyBridge.launchGame(gameId);
+                
+                // 监听启动状态
+                if (qt.pyBridge.launchStatus) {
+                    qt.pyBridge.launchStatus.connect(function(gameId, status) {
+                        if (status === "success") {
+                            btn.innerHTML = '<i class="fas fa-check"></i> 已启动';
+                            setTimeout(() => {
+                                btn.innerHTML = originalText;
+                                btn.disabled = false;
+                            }, 2000);
+                        } else {
+                            btn.innerHTML = '<i class="fas fa-times"></i> 启动失败';
+                            btn.disabled = false;
+                        }
+                    });
+                }
+            }
+        }
+
+        // 初始加载游戏
+        document.addEventListener('DOMContentLoaded', loadGames);
+
+        // 过滤按钮点击效果
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                // 这里可以添加过滤逻辑
+                loadGames();
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>首页</title>
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="custom-colors.css">
+</head>
+<body>
+    <div class="welcome-section" style="padding: 40px; text-align: center;">
+        <h1 style="font-size: 2.5rem; margin-bottom: 20px; color: var(--accent-light);">BlockLauncher</h1>
+        <p style="font-size: 1.2rem; max-width: 800px; margin: 0 auto 30px; line-height: 1.6;">
+            --开发者很懒，什么都没写--
+        </p>
+        
+        <div class="quick-actions" style="display: flex; justify-content: center; gap: 20px; margin-bottom: 40px;">
+            <button id="quick-play" style="background: var(--accent); color: white; padding: 12px 30px; border-radius: 50px; border: none; font-size: 1.1rem; cursor: pointer; transition: var(--transition);">
+                <i class="fas fa-play"></i> 快速开始游戏
+            </button>
+            <button id="quick-download" style="background: #1565C0; color: white; padding: 12px 30px; border-radius: 50px; border: none; font-size: 1.1rem; cursor: pointer; transition: var(--transition);">
+                <i class="fas fa-download"></i> 下载新版本
+            </button>
+        </div>
+        
+        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto;">
+            <div class="stat-card" style="background: rgba(33, 33, 33, 0.7); border-radius: 12px; padding: 20px; border: 1px solid rgba(76, 175, 80, 0.2);">
+                <h3 style="color: var(--accent-light); margin-bottom: 15px;"><i class="fas fa-gamepad"></i> 游戏统计</h3>
+                <div id="games-stats" style="font-size: 1.1rem; line-height: 1.8;">
+                    加载中...
+                </div>
+            </div>
+            
+            <div class="stat-card" style="background: rgba(33, 33, 33, 0.7); border-radius: 12px; padding: 20px; border: 1px solid rgba(76, 175, 80, 0.2);">
+                <h3 style="color: var(--accent-light); margin-bottom: 15px;"><i class="fas fa-globe"></i> 新闻与更新</h3>
+                <div id="news-feed" style="font-size: 1.1rem; line-height: 1.8;">
+                    <p><i class="fas fa-newspaper"></i> Minecraft 1.20.4 现已发布！</p>
+                    <p><i class="fas fa-newspaper"></i> 新的光影包支持已添加</p>
+                    <p><i class="fas fa-newspaper"></i> 启动器 v1.3.0 更新日志</p>
+                </div>
+                <button style="margin-top: 15px; background: transparent; border: 1px solid var(--accent); color: var(--accent-light); padding: 8px 20px; border-radius: 50px; cursor: pointer;">
+                    查看更多 <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // 加载游戏统计
+        function loadGamesStats() {
+            if (window.getInstalledGames) {
+                const games = JSON.parse(window.getInstalledGames());
+                const stats = document.getElementById('games-stats');
+                
+                if (games.length > 0) {
+                    const totalGames = games.length;
+                    const playedGames = games.filter(g => g.last_played).length;
+                    const lastPlayed = games.reduce((latest, game) => {
+                        return (!latest || game.last_played > latest) ? game.last_played : latest;
+                    }, null);
+                    
+                    stats.innerHTML = `
+                        <p><i class="fas fa-cube"></i> 已安装游戏: ${totalGames} 个</p>
+                        <p><i class="fas fa-play-circle"></i> 已游玩游戏: ${playedGames} 个</p>
+                        <p><i class="fas fa-clock"></i> 最近游玩: ${lastPlayed || '从未游玩'}</p>
+                        <p><i class="fas fa-star"></i> 最受欢迎版本: ${getPopularVersion(games)}</p>
+                    `;
+                } else {
+                    stats.innerHTML = '<p>尚未安装任何游戏</p>';
+                }
+            }
+        }
+        
+        // 获取最受欢迎版本
+        function getPopularVersion(games) {
+            if (games.length === 0) return "无";
+            
+            const versionCount = {};
+            games.forEach(game => {
+                const version = game.version;
+                versionCount[version] = (versionCount[version] || 0) + 1;
+            });
+            
+            return Object.entries(versionCount)
+                .sort((a, b) => b[1] - a[1])[0][0];
+        }
+        
+        // 快速开始游戏
+        document.getElementById('quick-play').addEventListener('click', function() {
+            // 导航到游戏库页面
+            window.parent.document.querySelector('.nav-item[data-page="games.html"]').click();
+        });
+        
+        // 快速下载游戏
+        document.getElementById('quick-download').addEventListener('click', function() {
+            // 导航到下载页面
+            window.parent.document.querySelector('.nav-item[data-page="downloads.html"]').click();
+        });
+        
+        // 初始加载
+        document.addEventListener('DOMContentLoaded', loadGamesStats);
+    </script>
+</body>
+</html>

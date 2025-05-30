@@ -10,9 +10,6 @@ from datetime import datetime
 
 
 
-with open("BL.log", "w") as f:
-    f.write(f"-----====***[{datetime.now().strftime("%H%M%S")}]开始记录log***====-----\n")
-
 def log(message, mode="Info"):
     timestamp = datetime.now().strftime("%H%M%S")
     try :
@@ -189,14 +186,12 @@ class MinecraftLauncherGenerator:
         }
 
     def generate_install_script(self):
-        """生成安装脚本"""
+        """生成安装脚本，带进度反馈"""
         log("开始安装 Minecraft 游戏文件...")
-        
         # 创建基础目录
         (self.minecraft_dir / "versions" / self.version).mkdir(parents=True, exist_ok=True)
         (self.minecraft_dir / "assets" / "objects").mkdir(parents=True, exist_ok=True)
         log("基础目录创建完成.")
-        
         # 下载客户端JAR
         client_jar = self.minecraft_dir / "versions" / self.version / f"{self.version}.jar"
         self._download_file(
@@ -205,7 +200,6 @@ class MinecraftLauncherGenerator:
             self.client_download["sha1"]
         )
         log("客户端JAR文件下载完成.")
-        
         # 下载资源索引
         asset_index_file = self.minecraft_dir / "assets" / "indexes" / f"{self.asset_index}.json"
         self._download_file(
@@ -213,31 +207,27 @@ class MinecraftLauncherGenerator:
             asset_index_file
         )
         log("资源索引文件下载完成.")
-        
-        # 下载所有资源文件
+        # 下载所有资源文件（带进度）
         with open(asset_index_file, "r", encoding="utf-8") as f:
             assets = json.load(f)["objects"]
-            for asset in assets.values():
+            total = len(assets)
+            for idx, asset in enumerate(assets.values()):
                 hash_ = asset["hash"]
                 url = f"https://resources.download.minecraft.net/{hash_[:2]}/{hash_}"
                 path = self.minecraft_dir / "assets" / "objects" / hash_[:2] / hash_
                 self._download_file(url, path, hash_)
+                percent = int((idx + 1) / total * 100)
+                log(f"资源下载进度: {percent}%")
         log("所有资源文件下载完成.")
-        
-        # 下载原生库文件
-        for lib in self.version_meta["libraries"]:
-            if not self._check_library_compatibility(lib):
-                continue
-            
-            if "downloads" not in lib:
-                continue
-                
+        # 下载原生库文件（带进度）
+        libs = [lib for lib in self.version_meta["libraries"] if self._check_library_compatibility(lib) and "downloads" in lib]
+        total_libs = len(libs)
+        for idx, lib in enumerate(libs):
             # 下载主库文件
             if "artifact" in lib["downloads"]:
                 artifact = lib["downloads"]["artifact"]
                 lib_path = self.minecraft_dir / "libraries" / artifact["path"]
                 self._download_file(artifact["url"], lib_path, artifact["sha1"])
-
             # 下载原生库
             if "classifiers" in lib["downloads"]:
                 natives = lib["natives"]
@@ -246,20 +236,23 @@ class MinecraftLauncherGenerator:
                     classifier = lib["downloads"]["classifiers"][natives[platform_key]]
                     native_path = self.minecraft_dir / "libraries" / classifier["path"]
                     self._download_file(classifier["url"], native_path, classifier["sha1"])
+            percent = int((idx + 1) / total_libs * 100)
+            log(f"库下载进度: {percent}%")
         log("所有库文件下载完成.")
-        
         # 处理Fabric加载器
         if self.loader_type == "fabric":
             fabric_meta = self._fetch_fabric_metadata()
-            for lib in fabric_meta["libraries"]:
+            total_fabric = len(fabric_meta["libraries"])
+            for idx, lib in enumerate(fabric_meta["libraries"]):
                 parts = lib["name"].split(":")
                 group, artifact, version = parts[0], parts[1], parts[2]
                 jar_name = f"{artifact}-{version}.jar"
                 lib_path = self.minecraft_dir / "libraries" / \
                     group.replace(".", "/") / artifact / version / jar_name
-                    
                 url = f"https://maven.fabricmc.net/{group.replace('.', '/')}/{artifact}/{version}/{jar_name}"
                 self._download_file(url, lib_path, lib.get("sha1"))
+                percent = int((idx + 1) / total_fabric * 100)
+                log(f"Fabric库下载进度: {percent}%")
         log("Fabric加载器处理完成.")
         log("安装脚本生成完成.")
 
@@ -322,17 +315,15 @@ class MinecraftLauncherGenerator:
 
 if __name__ == "__main__":
     log("正在启动Minecraft启动器生成器...")
-    
-    # 使用示例：生成1.20.4 Fabric启动配置
+    # 使用示例：生成1.20.4 Vanilla启动配置
     launcher = MinecraftLauncherGenerator(
-        version="1.21.4",
-        player_name="south_melon"
+        version="1.20.1",
+        player_name="Steve"
     )
-    log("开始生成安装Minecraft..")
+    log("开始生成安装Minecraft...")
     launcher.generate_install_script()
     log("安装Minecraft完成, 开始生成启动脚本...")
     config = launcher.generate_launch_script()
-    
     print("启动命令：")
     print(f"{config['java_path']} {' '.join(config['jvm_args'])} {' '.join(config['game_args'])}")
     with open("launch.bat", "w") as f:

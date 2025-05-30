@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>下载内容</title>
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="custom-colors.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Minecraftia&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="downloads-section">
+        <div class="section-header">
+            <h2>下载内容</h2>
+            <div class="filter-buttons">
+                <button class="filter-btn active">全部</button>
+                <button class="filter-btn">下载中</button>
+                <button class="filter-btn">失败</button>
+            </div>
+            <div style="margin-top:16px;">
+                <button id="add-download-btn" style="background:#388e3c;color:#fff;padding:8px 20px;border:none;border-radius:6px;font-size:1rem;cursor:pointer;">
+                    <i class="fa fa-plus"></i> 下载新游戏
+                </button>
+            </div>
+        </div>
+        <div class="downloads-grid" id="downloads-grid">
+            <!-- 下载卡片将由JavaScript动态生成 -->
+        </div>
+    </div>
+    <div class="footer-info">
+        <div class="status-indicator">下载管理器状态: 运行正常</div>
+        <div>当前下载: 1 / 3</div>
+        <div>总速度: 2.3 MB/s</div>
+    </div>
+    <style>
+        .downloads-section { padding: 32px; }
+        .downloads-grid { display: flex; flex-wrap: wrap; gap: 24px; }
+        .download-card {
+            background: #23272e;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            display: flex;
+            width: 420px;
+            padding: 20px;
+            align-items: flex-start;
+            transition: box-shadow .2s,transform .2s;
+        }
+        .download-card:hover {
+            box-shadow: 0 10px 32px rgba(0,0,0,0.25);
+            transform: translateY(-4px);
+        }
+        .download-icon {
+            width: 56px; height: 56px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; color: #fff; margin-right: 20px;
+        }
+        .download-info { flex: 1; }
+        .download-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
+        .download-meta { font-size: 0.95rem; color: #aaa; margin-bottom: 8px; display: flex; gap: 16px; }
+        .download-status.downloading { color: #4CAF50; }
+        .download-status.finished { color: #1565C0; }
+        .download-status.failed { color: #C62828; }
+        .progress-bar-bg {
+            width: 100%; height: 8px; background: #333; border-radius: 4px; margin-bottom: 10px;
+        }
+        .progress-bar {
+            height: 8px; border-radius: 4px;
+            transition: width .4s cubic-bezier(.4,2,.6,1);
+        }
+        .download-actions { display: flex; gap: 12px; }
+        .download-actions button {
+            background: #23272e; color: #fff; border: none; border-radius: 6px;
+            padding: 6px 16px; font-size: 0.95rem; cursor: pointer; transition: background .2s;
+        }
+        .download-actions button:hover { background: #444; }
+    </style>
+    <script>
+        // 下载新游戏按钮逻辑
+        document.getElementById('add-download-btn').onclick = function() {
+            let version = prompt('请输入要下载的Minecraft版本号（如1.20.4）：', '1.20.4');
+            if(!version) return;
+            let player = prompt('请输入玩家名：', 'Steve');
+            if(!player) return;
+            let loaderType = prompt('请输入加载器类型（vanilla, fabric, forge）：', 'vanilla');
+            if(!loaderType) loaderType = 'vanilla';
+            
+            // 创建UI卡片
+            const grid = document.getElementById('downloads-grid');
+            const card = document.createElement('div');
+            card.className = 'download-card';
+            card.innerHTML = `
+                <div class="download-icon" style="background: #7B1FA2;">
+                    <i class="fas fa-gamepad"></i>
+                </div>
+                <div class="download-info">
+                    <div class="download-title">Minecraft ${version} (${loaderType})</div>
+                    <div class="download-meta">
+                        <span>进度: <span class="progress-text">0%</span></span>
+                        <span class="download-status downloading">等待开始</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar" style="width:0%;background:linear-gradient(90deg,#7B1FA2,#ce93d8);"></div>
+                    </div>
+                    <div class="download-actions">
+                        <button class="cancel-btn"><i class="fas fa-times"></i> 取消</button>
+                    </div>
+                </div>
+            `;
+            grid.prepend(card);
+            
+            // 绑定取消按钮
+            card.querySelector('.cancel-btn').onclick = function(){ 
+                card.remove();
+                // 实际应该通知后端取消下载
+            };
+            
+            // 调用后端真实下载
+            if(window.downloadGame){
+                window.downloadGame(version, player, loaderType);
+            } else if(window.qt && qt.pyBridge && qt.pyBridge.downloadGame){
+                qt.pyBridge.downloadGame(version, player, loaderType);
+            }
+            
+            // 监听进度
+            if(window.qt && qt.pyBridge && qt.pyBridge.downloadProgress){
+                const progressHandler = function(percent, msg){
+                    const progressText = card.querySelector('.progress-text');
+                    const progressBar = card.querySelector('.progress-bar');
+                    const statusText = card.querySelector('.download-status');
+                    if (progressText) progressText.textContent = percent + '%';
+                    if (progressBar) progressBar.style.width = percent + '%';
+                    if (statusText) statusText.textContent = msg;
+                };
+                qt.pyBridge.downloadProgress.connect(progressHandler);
+            }
+            
+            // 监听下载完成
+            if(window.qt && qt.pyBridge && qt.pyBridge.downloadFinished){
+                const finishedHandler = function(status, gameId){
+                    const statusText = card.querySelector('.download-status');
+                    if (status === "success") {
+                        statusText.textContent = '已完成';
+                        statusText.className = 'download-status finished';
+                        card.querySelector('.download-actions').innerHTML = `
+                            <button class="open-btn"><i class="fas fa-folder-open"></i> 打开文件夹</button>
+                            <button class="delete-btn"><i class="fas fa-trash"></i> 删除</button>
+                        `;
+                        
+                        // 绑定新按钮
+                        card.querySelector('.open-btn').onclick = function() {
+                            if (window.openGameFolder) window.openGameFolder();
+                            else if (window.qt && qt.pyBridge && qt.pyBridge.openGameFolder) {
+                                qt.pyBridge.openGameFolder();
+                            }
+                        };
+                        card.querySelector('.delete-btn').onclick = function() {
+                            card.remove();
+                        };
+                    } else {
+                        statusText.textContent = '下载失败';
+                        statusText.className = 'download-status failed';
+                    }
+                };
+                qt.pyBridge.downloadFinished.connect(finishedHandler);
+            }
+        };
+        
+        // 过滤按钮点击效果
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const filter = this.textContent.trim();
+                const cards = document.querySelectorAll('.download-card');
+                cards.forEach(card => {
+                    card.style.display = 'flex';
+                    if (filter === '下载中' && !card.querySelector('.download-status').classList.contains('downloading')) {
+                        card.style.display = 'none';
+                    }
+                    if (filter === '已完成' && !card.querySelector('.download-status').classList.contains('finished')) {
+                        card.style.display = 'none';
+                    }
+                    if (filter === '失败' && !card.querySelector('.download-status').classList.contains('failed')) {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
