@@ -1,0 +1,497 @@
+/* theme.css - 黑色主题模板 */
+:root {
+    /* 主题颜色（固定黑色系） */
+    --primary: #1a1a1a;
+    --secondary: #121212;
+    --text-primary: #FFFFFF;
+    --text-secondary: #BDBDBD;
+    --card-bg: #212121;
+    
+    /* 布局属性 */
+    --border-radius: 12px;
+    --transition: all 0.3s ease;
+}
+
+/* 强制全局字体为 Noto Sans SC，兼容英文和中文 */
+@font-face {
+  font-family: 'Noto Sans SC';
+  src: url('../fonts/NotoSansSC-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Noto Sans';
+  src: url('../fonts/NotoSans-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+body, html {
+  font-family: 'Noto Sans SC', 'Noto Sans', 'Microsoft YaHei', Arial, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 自定义滚动条样式，提升一致性 */
+::-webkit-scrollbar {
+  width: 8px;
+  background: #222831;
+}
+::-webkit-scrollbar-thumb {
+  background: #393e46;
+  border-radius: 4px;
+}
+
+/* 重置部分表单控件样式 */
+input, button, select, textarea {
+  font-family: inherit;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* font-family: 'Noto Sans SC', 'Noto Sans', 'Microsoft YaHei', Arial, sans-serif !important; */
+}
+
+body {
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+}
+
+body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 10% 20%, rgba(76, 175, 80, 0.1) 0%, transparent 20%),
+        radial-gradient(circle at 90% 80%, rgba(76, 175, 80, 0.1) 0%, transparent 20%);
+    z-index: -1;
+}
+
+.grid-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(76, 175, 80, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(76, 175, 80, 0.1) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: -2;
+    opacity: 0.15;
+}
+
+.container {
+    display: flex;
+    min-height: 100vh;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.sidebar {
+    width: 280px;
+    background: rgba(18, 18, 18, 0.8);
+    border-radius: var(--border-radius);
+    padding: 25px 15px;
+    margin-right: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(76, 175, 80, 0.2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+.logo {
+    text-align: center;
+    padding: 20px 0;
+    margin-bottom: 30px;
+    border-bottom: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.logo h1 {
+    font-family: 'Minecraftia', sans-serif;
+    font-size: 2.5rem;
+    color: var(--accent);
+    text-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+    letter-spacing: 2px;
+}
+
+.logo p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+.nav-items {
+    list-style: none;
+    flex-grow: 1;
+}
+
+.nav-item {
+    padding: 15px 20px;
+    margin: 8px 0;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: var(--transition);
+    font-weight: 500;
+}
+
+.nav-item:hover, .nav-item.active {
+    background: rgba(76, 175, 80, 0.15);
+    color: var(--accent-light);
+}
+
+.nav-item i {
+    font-size: 1.2rem;
+    margin-right: 15px;
+    width: 24px;
+    text-align: center;
+}
+
+.account-section {
+    margin-top: auto;
+    padding: 20px;
+    background: rgba(33, 33, 33, 0.6);
+    border-radius: var(--border-radius);
+    text-align: center;
+    border: 1px solid rgba(76, 175, 80, 0.2);
+}
+
+.avatar {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    border: 3px solid var(--accent-light);
+}
+
+.username {
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+}
+
+.status {
+    color: var(--accent-light);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    background: var(--accent-light);
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    background: rgba(18, 18, 18, 0.8);
+    border-radius: var(--border-radius);
+    padding: 20px 30px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(76, 175, 80, 0.2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    background: rgba(33, 33, 33, 0.8);
+    border-radius: 50px;
+    padding: 8px 20px;
+    width: 300px;
+}
+
+.search-bar input {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    padding: 8px 15px;
+    width: 100%;
+    outline: none;
+    font-size: 1rem;
+}
+
+.search-bar i {
+    color: var(--text-secondary);
+}
+
+.games-section {
+    flex: 1;
+    background: rgba(18, 18, 18, 0.8);
+    border-radius: var(--border-radius);
+    padding: 30px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(76, 175, 80, 0.2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.section-header h2 {
+    font-size: 1.8rem;
+    color: var(--accent-light);
+    position: relative;
+    padding-bottom: 10px;
+}
+
+.section-header h2::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 50px;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-btn {
+    background: rgba(33, 33, 33, 0.8);
+    border: 1px solid rgba(76, 175, 80, 0.2);
+    color: var(--text-secondary);
+    padding: 8px 15px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.filter-btn.active, .filter-btn:hover {
+    background: rgba(76, 175, 80, 0.15);
+    color: var(--accent-light);
+    border-color: var(--accent);
+}
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+}
+
+.game-card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    transition: var(--transition);
+    border: 1px solid rgba(76, 175, 80, 0.1);
+    position: relative;
+}
+
+.game-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    border-color: var(--accent);
+}
+
+.game-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.5s ease;
+}
+
+.game-card:hover::before {
+    transform: scaleX(1);
+}
+
+.game-banner {
+    height: 160px;
+    background: linear-gradient(45deg, #2E7D32, #1B5E20);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.game-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.game-icon {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: #2E7D32;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    border: 2px solid var(--accent-light);
+}
+
+.game-info {
+    padding: 20px;
+}
+
+.game-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.game-meta {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+}
+
+.game-version {
+    background: rgba(76, 175, 80, 0.15);
+    color: var(--accent-light);
+    padding: 3px 10px;
+    border-radius: 50px;
+    font-size: 0.8rem;
+}
+
+.game-actions {
+    display: flex;
+    justify-content: space-between;
+}
+
+.settings-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+    border: none;
+    width: 40px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.settings-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+}
+
+.footer-info {
+    display: flex;
+    justify-content: space-between;
+    background: rgba(18, 18, 18, 0.8);
+    border-radius: var(--border-radius);
+    padding: 15px 30px;
+    margin-top: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(76, 175, 80, 0.2);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+}
+
+.status-indicator::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    background: var(--accent-light);
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+@media (max-width: 1100px) {
+    .container {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 20px;
+    }
+    
+    .games-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .search-bar {
+        width: 100%;
+    }
+    
+    .games-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .footer-info {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.game-card {
+    animation: fadeIn 0.5s ease forwards;
+    opacity: 0;
+}
+
+.game-card:nth-child(1) { animation-delay: 0.1s; }
+.game-card:nth-child(2) { animation-delay: 0.2s; }
+.game-card:nth-child(3) { animation-delay: 0.3s; }
+.game-card:nth-child(4) { animation-delay: 0.4s; }
+.game-card:nth-child(5) { animation-delay: 0.5s; }
+.game-card:nth-child(6) { animation-delay: 0.6s; }

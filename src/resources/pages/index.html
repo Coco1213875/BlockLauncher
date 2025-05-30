@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft BlockLauncher</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Minecraftia&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="custom-colors.css">
+</head>
+<body>
+    <div id="custom-titlebar" style="position:fixed;top:0;left:0;width:100vw;height:40px;z-index:9999;display:flex;align-items:center;justify-content:flex-end;background:rgba(18,18,18,0.7);-webkit-app-region:drag;">
+        <button id="close-btn" style="margin-right:16px;width:32px;height:32px;border:none;border-radius:16px;background:rgba(229,57,53,0.8);color:#fff;font-size:20px;cursor:pointer;-webkit-app-region:no-drag;">✕</button>
+    </div>
+    <script>
+        // 关闭按钮
+        document.getElementById('close-btn').onclick = function() {
+            if(window.closeApp) window.closeApp();
+            else console.log('__CLOSE_APP__');
+        };
+        // 拖动窗口（增强版，支持前端拖动原生窗口）
+        (function(){
+            let isDragging = false, dragOffset = [0, 0];
+            document.getElementById('custom-titlebar').addEventListener('mousedown', function(e) {
+                if(e.target.id === 'close-btn') return;
+                if(e.button !== 0) return;
+                isDragging = true;
+                window.getWindowPos && window.getWindowPos(function(pos){
+                    dragOffset = [e.screenX - pos[0], e.screenY - pos[1]];
+                });
+                e.preventDefault();
+            });
+            window.addEventListener('mousemove', function(e) {
+                if(isDragging && window.moveWindow) {
+                    window.moveWindow(e.screenX - dragOffset[0], e.screenY - dragOffset[1]);
+                    e.preventDefault();
+                }
+            });
+            window.addEventListener('mouseup', function() { isDragging = false; });
+        })();
+    </script>
+    <div class="grid-bg"></div>
+    
+    <div class="container">
+        <!-- 侧边导航 -->
+        <div class="sidebar">
+            <div class="logo">
+                <h1>CRAFT</h1>
+                <p>Elevate Your Minecraft Experience</p>
+            </div>
+            
+            <ul class="nav-items">
+                <li class="nav-item active">
+                    <i class="fa-solid fa-house"></i>
+                    <span>首页</span>
+                </li>
+                <li class="nav-item">
+                    <i class="fa-solid fa-table-cells-large"></i>
+                    <span>游戏库</span>
+                </li>
+                <li class="nav-item">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>设置</span>
+                </li>
+                <li class="nav-item">
+                    <i class="fa-solid fa-user-group"></i>
+                    <span>好友</span>
+                </li>
+                <li class="nav-item">
+                    <i class="fa-solid fa-download"></i>
+                    <span>下载内容</span>
+                </li>
+                <li class="nav-item">
+                    <i class="fa-solid fa-store"></i>
+                    <span>模组商店</span>
+                </li>
+            </ul>
+            
+            <div class="account-section">
+                <div class="avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="username">Steve_Player</div>
+                <div class="status">在线</div>
+            </div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <div class="header">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="搜索游戏、模组或资源包...">
+                </div>
+                
+                <div class="actions">
+                    <button>
+                        <i class="fas fa-plus"></i>
+                        添加游戏实例
+                    </button>
+                </div>
+            </div>
+            
+            <div class="games-section">
+                <div class="section-header">
+                    <h2>游戏库</h2>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active">全部</button>
+                        <button class="filter-btn">最近游玩</button>
+                        <button class="filter-btn">已安装</button>
+                        <button class="filter-btn">收藏</button>
+                    </div>
+                </div>
+                
+                <div class="games-grid">
+                    <!-- 游戏卡片 1 -->
+                    <div class="game-card">
+                        <div class="game-banner" style="background: linear-gradient(45deg, #4CAF50, #2E7D32);">
+                            <div class="game-icon" style="background: #4CAF50;">
+                                <i class="fas fa-grass"></i>
+                            </div>
+                        </div>
+                        <div class="game-info">
+                            <div class="game-title">Minecraft 1.20.1</div>
+                            <div class="game-meta">
+                                <span>上次游玩: 2小时前</span>
+                                <span class="game-version">正式版</span>
+                            </div>
+                            <div class="game-actions">
+                                <button class="play-btn">启动游戏</button>
+                                <button class="settings-btn">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 游戏卡片 2 -->
+                    <div class="game-card">
+                        <div class="game-banner" style="background: linear-gradient(45deg, #1565C0, #0D47A1);">
+                            <div class="game-icon" style="background: #1565C0;">
+                                <i class="fas fa-snowflake"></i>
+                            </div>
+                        </div>
+                        <div class="game-info">
+                            <div class="game-title">WinterCraft Modpack</div>
+                            <div class="game-meta">
+                                <span>上次游玩: 1天前</span>
+                                <span class="game-version">Fabric 1.19.2</span>
+                            </div>
+                            <div class="game-actions">
+                                <button class="play-btn">启动游戏</button>
+                                <button class="settings-btn">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 游戏卡片 3 -->
+                    <div class="game-card">
+                        <div class="game-banner" style="background: linear-gradient(45deg, #7B1FA2, #4A148C);">
+                            <div class="game-icon" style="background: #7B1FA2;">
+                                <i class="fas fa-dragon"></i>
+                            </div>
+                        </div>
+                        <div class="game-info">
+                            <div class="game-title">Fantasy Adventure</div>
+                            <div class="game-meta">
+                                <span>上次游玩: 3天前</span>
+                                <span class="game-version">Forge 1.18.2</span>
+                            </div>
+                            <div class="game-actions">
+                                <button class="play-btn">启动游戏</button>
+                                <button class="settings-btn">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 游戏卡片 4 -->
+                    <div class="game-card">
+                        <div class="game-banner" style="background: linear-gradient(45deg, #C62828, #B71C1C);">
+                            <div class="game-icon" style="background: #C62828;">
+                                <i class="fas fa-fire"></i>
+                            </div>
+                        </div>
+                        <div class="game-info">
+                            <div class="game-title">Nether Expeditions</div>
+                            <div class="game-meta">
+                                <span>上次游玩: 1周前</span>
+                                <span class="game-version">Forge 1.16.5</span>
+                            </div>
+                            <div class="game-actions">
+                                <button class="play-btn">启动游戏</button>
+                                <button class="settings-btn">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 游戏卡片 5 -->
+                    <div class="game-card">
+                        <div class="game-banner" style="background: linear-gradient(45deg, #00838F, #006064);">
+                            <div class="game-icon" style="background: #00838F;">
+                                <i class="fas fa-water"></i>
+                            </div>
+                        </div>
+                        <div class="game-info">
+                            <div class="game-title">Aquatic Adventures</div>
+                            <div class="game-meta">
+                                <span>上次游玩: 2周前</span>
+                                <span class="game-version">Fabric 1.19.2</span>
+                            </div>
+                            <div class="game-actions">
+                                <button class="play-btn">启动游戏</button>
+                                <button class="settings-btn">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 游戏卡片 6 -->
+                    <div class="game-card">
+                        <div class="game-banner" style="background: linear-gradient(45deg, #37474F, #263238);">
+                            <div class="game-icon" style="background: #37474F;">
+                                <i class="fas fa-cube"></i>
+                            </div>
+                        </div>
+                        <div class="game-info">
+                            <div class="game-title">Vanilla+ Experience</div>
+                            <div class="game-meta">
+                                <span>上次游玩: 3周前</span>
+                                <span class="game-version">正式版 1.19.3</span>
+                            </div>
+                            <div class="game-actions">
+                                <button class="play-btn">启动游戏</button>
+                                <button class="settings-btn">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-info">
+                <div class="status-indicator">启动器状态: 运行正常</div>
+                <div>内存使用: 1.2 GB / 8 GB</div>
+                <div>版本: BlockLauncher v1.2.0</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 增强的交互效果
+        document.addEventListener('DOMContentLoaded', function() {
+            // 导航项点击效果
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    navItems.forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+            
+            // 过滤按钮点击效果
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 简单过滤效果
+                    const filter = this.textContent.trim();
+                    const cards = document.querySelectorAll('.game-card');
+                    
+                    cards.forEach(card => {
+                        card.style.display = 'block';
+                        
+                        if (filter === '最近游玩' && card.querySelector('.game-meta span').textContent.includes('周前')) {
+                            card.style.display = 'none';
+                        }
+                        
+                        if (filter === '已安装' && card.querySelector('.game-version').textContent.includes('Fabric')) {
+                            card.style.display = 'none';
+                        }
+                        
+                        if (filter === '收藏' && !card.querySelector('.game-title').textContent.includes('Adventure')) {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
+            
+            // 游戏卡片悬停效果增强
+            const gameCards = document.querySelectorAll('.game-card');
+            gameCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-8px)';
+                    this.style.boxShadow = '0 15px 30px rgba(0, 0, 0, 0.5)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(-5px)';
+                    this.style.boxShadow = 'rgba(0, 0, 0, 0.4) 0px 10px 25px';
+                });
+            });
+            
+            // 播放按钮效果
+            const playBtns = document.querySelectorAll('.play-btn');
+            playBtns.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 启动中...';
+                    this.disabled = true;
+                    
+                    // 添加启动动画效果
+                    const card = this.closest('.game-card');
+                    card.style.boxShadow = '0 0 25px rgba(76, 175, 80, 0.7)';
+                    
+                    // 模拟启动延迟
+                    setTimeout(() => {
+                        this.innerHTML = '<i class="fas fa-check"></i> 已启动';
+                        this.style.background = 'linear-gradient(45deg, #388e3c, #2E7D32)';
+                        
+                        setTimeout(() => {
+                            this.innerHTML = originalText;
+                            this.disabled = false;
+                            this.style.background = 'linear-gradient(45deg, var(--primary), var(--primary-dark))';
+                            card.style.boxShadow = 'rgba(0, 0, 0, 0.4) 0px 10px 25px';
+                        }, 2000);
+                    }, 3000);
+                });
+            });
+            
+            // 搜索功能
+            const searchInput = document.querySelector('.search-bar input');
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const cards = document.querySelectorAll('.game-card');
+                
+                cards.forEach(card => {
+                    const title = card.querySelector('.game-title').textContent.toLowerCase();
+                    const version = card.querySelector('.game-version').textContent.toLowerCase();
+                    
+                    if (title.includes(searchTerm) || version.includes(searchTerm)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

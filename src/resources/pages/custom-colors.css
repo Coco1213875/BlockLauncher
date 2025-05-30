@@ -1,0 +1,48 @@
+/* custom-colors.css - 可自定义的按钮颜色（默认绿色） */
+:root {
+    /* 可自定义的强调色（默认绿色）*/
+    --accent: #4CAF50;
+    --accent-light: #66BB6A;
+}
+
+/* 可交互元素样式 */
+.actions button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 50px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+}
+
+.actions button:hover {
+    background: var(--accent-light);
+    transform: translateY(-2px);
+    box-shadow: 0 7px 20px rgba(76, 175, 80, 0.4);
+}
+
+.actions button i {
+    margin-right: 8px;
+}
+
+.play-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    flex-grow: 1;
+    margin-right: 10px;
+}
+
+.play-btn:hover {
+    background: var(--accent-light);
+}
