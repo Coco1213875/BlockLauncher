@@ -1,52 +1,36 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile
-from PyQt5.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, pyqtSignal, QSettings
+from PyQt5.QtCore import QUrl, Qt, QObject, pyqtSlot, QPoint, pyqtSignal, QSettings, QTimer
 from PyQt5.QtGui import QRegion, QPainterPath, QMouseEvent
+from LauncherGenerator import *
 import sys
 import os
+import webbrowser
 import json
 import threading
 from pathlib import Path
 import subprocess
-import webbrowser
-from datetime import datetime
 
-# 初始化日志
-def init_log():
-    log_path = Path("BL.log")
-    with open(log_path, "w") as f:
-        f.write(f"-----====***[{datetime.now().strftime('%H%M%S')}]开始记录log***====-----\n")
-
-def log(message, mode="Info"):
-    timestamp = datetime.now().strftime("%H%M%S")
-    try :
-        print(f"[{timestamp}] | [{mode}] {message}", flush=True)
-        with open("BL.log", "a") as f:
-            f.write(f"[{timestamp}] | [{mode}] {message}\n")
-    except Exception as e:
-        print(f"[{timestamp}] | [Error] 错误地引用log函数: {e}", flush=True)
-        with open("BL.log", "a") as f:
-            f.write(f"[{timestamp}] | [Error] 错误地引用log函数: {e}\n")
+# 定义全局变量
+GAMES_FILE = None
+WORLDS_FILE = None
 
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--use-gl=desktop"
-
-# 全局设置
-SETTINGS_FILE = "blocklauncher.ini"
-GAMES_FILE = "games.json"
-WORLDS_FILE = "worlds.json"
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        log("初始化主窗口...")
+        log("初始化主窗口...", "Info")
         self.setWindowTitle("BlockLauncher")
         self.setGeometry(100, 100, 1280, 800)
-        self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint)
+        log("设置无边框窗口样式", "Info")
+        self.setWindowFlags(Qt.FramelessWindowHint)
         
         # 窗口拖动相关变量
         self.dragging = False
         self.drag_position = QPoint()
         
+        log("初始化浏览器组件...", "WebPages/Info")
         # 设置User-Agent为Chrome
         profile = QWebEngineProfile.defaultProfile()
         profile.setHttpUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
@@ -59,6 +43,7 @@ class MainWindow(QMainWindow):
         self.browser.setAttribute(Qt.WA_TransparentForMouseEvents, False)
         
         html_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'resources', 'pages', 'index.html'))
+        log(f"加载本地HTML文件: {html_path}", "WebPages/Info")
         self.browser.load(QUrl.fromLocalFile(html_path))
         self.setCentralWidget(self.browser)
         
@@ -66,29 +51,42 @@ class MainWindow(QMainWindow):
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setStyleSheet('background: transparent;')
         
+        log("初始化窗口遮罩", "WebPages/Info")
         # 创建圆角遮罩
         self.update_mask()
         
+        log("绑定JS信号处理", "WebPages/Info")
         # 绑定JS信号
         self.browser.page().javaScriptConsoleMessage = self.on_js_console_message
         
+        log("安装事件过滤器", "WebPages/Info")
         # 安装事件过滤器
         self.browser.installEventFilter(self)
         
+        log("加载配置设置", "Info")
         # 加载设置
+        SETTINGS_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), 'settings.ini'))
         self.settings = QSettings(SETTINGS_FILE, QSettings.IniFormat)
+        
+        # 定义游戏列表和世界列表文件路径
+        global GAMES_FILE, WORLDS_FILE
+        GAMES_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), 'games.json'))
+        WORLDS_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), 'worlds.json'))
+        
+        # 加载游戏和世界列表
         self.installed_games = self.load_games()
         self.game_worlds = self.load_worlds()
         
+        log("初始化WebChannel通信", "Info")
         # 设置WebChannel用于关闭功能
         try:
             from PyQt5.QtWebChannel import QWebChannel
             
             class Bridge(QObject):
                 downloadProgress = pyqtSignal(int, str)  # 进度百分比, 状态文本
-                downloadFinished = pyqtSignal(str, str)  # 状态, 游戏ID
-                launchStatus = pyqtSignal(str, str)      # 游戏ID, 状态
-                worldsUpdated = pyqtSignal(str)          # 世界列表JSON
+                downloadFinished = pyqtSignal(str, str)  # 下载完成，附带状态和游戏ID
+                launchStatus = pyqtSignal(str, str)     # 启动状态
+                gamesListChanged = pyqtSignal(str)      # 游戏列表更新信号
                 
                 def __init__(self, window):
                     super().__init__()
@@ -100,14 +98,13 @@ class MainWindow(QMainWindow):
 
                 @pyqtSlot(str, str, str)
                 def downloadGame(self, version, player_name, loader_type="vanilla"):
-                    import threading
-                    from src.LauncherGenerator import MinecraftLauncherGenerator
-                    
+                    log(f"开始下载游戏: {version}, 玩家: {player_name}, 类型: {loader_type}", "Info")
                     # 生成游戏ID
                     game_id = f"{version}_{loader_type}_{player_name}"
                     
                     def run_download():
                         try:
+                            log(f"创建启动器生成器实例: {game_id}", "WebPages/Info")
                             launcher = MinecraftLauncherGenerator(
                                 version=version, 
                                 player_name=player_name, 
@@ -124,7 +121,8 @@ class MainWindow(QMainWindow):
                                         m = re.search(r"(\d{1,3})%", msg)
                                         if m:
                                             percent = int(m.group(1))
-                                except Exception:
+                                except Exception as e:
+                                    log(f"解析进度百分比失败: {e}", "WebPages/Warning")
                                     percent = 0
                                 self.downloadProgress.emit(int(percent), str(msg) if msg is not None else "")
                             
@@ -133,6 +131,7 @@ class MainWindow(QMainWindow):
                             setattr(__import__('builtins'), 'log', log_hook)
                             
                             # 执行下载
+                            log(f"生成安装脚本: {game_id}", "Info")
                             launcher.generate_install_script()
                             
                             # 恢复原始log函数
@@ -148,11 +147,16 @@ class MainWindow(QMainWindow):
                                 "last_played": "",
                                 "play_count": 0
                             }
+                            log(f"添加新游戏到列表: {game_id}", "WebPages/Info")
                             self.window.add_game(game_data)
+                            
+                            # 发送游戏列表更新信号
+                            self.gamesListChanged.emit(self.getGamesList())
                             
                             self.downloadProgress.emit(100, "下载完成")
                             self.downloadFinished.emit("success", game_id)
                         except Exception as e:
+                            log(f"下载游戏失败: {e}", "Error")
                             self.downloadProgress.emit(0, f"下载失败: {e}")
                             self.downloadFinished.emit("fail", game_id)
                     
@@ -161,13 +165,16 @@ class MainWindow(QMainWindow):
                 @pyqtSlot(str)
                 def launchGame(self, game_id):
                     """启动指定的游戏"""
+                    log(f"启动游戏请求: {game_id}", "WebPages/Info")
                     game = self.window.get_game(game_id)
                     if not game:
+                        log(f"游戏未找到: {game_id}", "WebPages/Warning")
                         self.launchStatus.emit(game_id, "游戏未找到")
                         return
                     
                     def run_launch():
                         try:
+                            log(f"创建启动器实例: {game_id}", "WebPages/Info")
                             from src.LauncherGenerator import MinecraftLauncherGenerator
                             launcher = MinecraftLauncherGenerator(
                                 version=game["version"],
@@ -178,9 +185,11 @@ class MainWindow(QMainWindow):
                             # 更新游戏信息
                             game["last_played"] = "刚刚"
                             game["play_count"] = game.get("play_count", 0) + 1
+                            log(f"更新游戏信息: {game_id} (第{game['play_count']}次游玩)", "Info")
                             self.window.update_game(game)
                             
                             # 生成启动命令
+                            log(f"生成启动脚本: {game_id}", "WebPages/Info")
                             config = launcher.generate_launch_script()
                             
                             # 构建命令
@@ -188,6 +197,7 @@ class MainWindow(QMainWindow):
                             command.extend(config['jvm_args'])
                             command.extend(config['game_args'])
                             
+                            log(f"执行启动命令: {' '.join(command)}", "Info")
                             # 启动游戏
                             if sys.platform == "win32":
                                 # Windows下创建新控制台窗口
@@ -199,243 +209,242 @@ class MainWindow(QMainWindow):
                                 # Linux/MacOS
                                 subprocess.Popen(command)
                             
+                            log(f"游戏启动成功: {game_id}", "Info")
                             self.launchStatus.emit(game_id, "success")
                         except Exception as e:
+                            log(f"启动游戏失败: {e}", "Error")
                             self.launchStatus.emit(game_id, f"启动失败: {e}")
                     
                     threading.Thread(target=run_launch, daemon=True).start()
                 
-                @pyqtSlot(str)
-                def loadWorld(self, world_name):
-                    """加载指定的游戏世界"""
-                    try:
-                        # 在实际实现中，这里会调用游戏启动命令并指定世界
-                        print(f"加载世界: {world_name}")
-                        # 这里只是模拟
-                        QMessageBox.information(
-                            self.window, 
-                            "世界加载", 
-                            f"正在加载世界: {world_name}"
-                        )
-                    except Exception as e:
-                        print(f"加载世界失败: {e}")
-
-                @pyqtSlot(str)
-                def createWorld(self, world_name):
-                    """创建新的游戏世界"""
-                    try:
-                        # 在实际实现中，这里会调用游戏命令创建新世界
-                        print(f"创建世界: {world_name}")
-                        # 添加到世界列表
-                        world_data = {
-                            "name": world_name,
-                            "game_id": "current_game",  # 实际应关联到特定游戏
-                            "created": "2023-10-15",
-                            "last_played": ""
-                        }
-                        self.window.add_world(world_data)
-                        
-                        # 更新UI
-                        self.worldsUpdated.emit(json.dumps(self.window.game_worlds))
-                        
-                        QMessageBox.information(
-                            self.window, 
-                            "世界创建", 
-                            f"已创建世界: {world_name}"
-                        )
-                    except Exception as e:
-                        print(f"创建世界失败: {e}")
-                
-                @pyqtSlot()
-                def getInstalledGames(self):
-                    """获取已安装的游戏列表"""
-                    return json.dumps(self.window.installed_games)
-                
-                @pyqtSlot()
-                def getGameWorlds(self):
-                    """获取游戏世界列表"""
-                    return json.dumps(self.window.game_worlds)
-                
-                @pyqtSlot(str, str, str)
-                def setSetting(self, key, value, category="general"):
-                    """保存设置"""
-                    self.window.settings.setValue(f"{category}/{key}", value)
-                
-                @pyqtSlot(str, str)
-                def getSetting(self, key, category="general", default=""):
-                    """获取设置"""
-                    return self.window.settings.value(f"{category}/{key}", default)
-                
                 @pyqtSlot()
                 def openGameFolder(self):
                     """打开游戏文件夹"""
+                    log("用户请求打开游戏文件夹", "WebPages/Info")
                     game_dir = Path(".minecraft")
                     if game_dir.exists():
-                        if sys.platform == "win32":
-                            os.startfile(game_dir)
-                        elif sys.platform == "darwin":
-                            subprocess.Popen(["open", str(game_dir)])
-                        else:
-                            subprocess.Popen(["xdg-open", str(game_dir)])
+                        try:
+                            if sys.platform == "win32":
+                                os.startfile(game_dir)
+                            elif sys.platform == "darwin":
+                                subprocess.Popen(["open", str(game_dir)])
+                            else:
+                                subprocess.Popen(["xdg-open", str(game_dir)])
+                            log(f"成功打开游戏文件夹: {game_dir}", "WebPages/Info")
+                        except Exception as e:
+                            log(f"打开游戏文件夹失败: {e}", "Error")
+                    else:
+                        log(f"游戏文件夹不存在: {game_dir}", "WebPages/Warning")
                 
                 @pyqtSlot(str)
                 def openUrl(self, url):
                     """打开外部链接"""
+                    log(f"用户请求打开链接: {url}", "WebPages/Info")
                     webbrowser.open(url)
+
+                @pyqtSlot(result=str)
+                def getGamesList(self):
+                    """获取游戏列表"""
+                    log("前端请求获取游戏列表", "WebPages/Info")
+                    try:
+                        if not hasattr(self.window, 'installed_games'):
+                            log("游戏列表未初始化", "WebPages/Warning")
+                            return "[]"
+                        
+                        if self.window.installed_games is None:
+                            log("游戏列表为空", "WebPages/Warning")
+                            return "[]"
+                        
+                        games_list = json.dumps(self.window.installed_games, ensure_ascii=False)
+                        log(f"返回游戏列表: {len(self.window.installed_games)}个游戏", "WebPages/Info")
+                        return games_list
+                    except Exception as e:
+                        log(f"获取游戏列表失败: {e}", "Error")
+                        return "[]"
 
             self.channel = QWebChannel()
             self.bridge = Bridge(self)
             self.channel.registerObject('pyBridge', self.bridge)
             self.browser.page().setWebChannel(self.channel)
             
-            # 注入JavaScript功能
+            # 注入JavaScript关闭功能
             def inject_js():
-                self.browser.page().runJavaScript('''
-                    (function(){
-                        if (typeof qt !== 'undefined' && qt.pyBridge) {
-                            // 关闭功能
-                            window.closeApp = function() { qt.pyBridge.closeApp(); };
-                            
-                            // 游戏功能
-                            window.launchGame = function(gameId) { qt.pyBridge.launchGame(gameId); };
-                            window.loadWorld = function(worldName) { qt.pyBridge.loadWorld(worldName); };
-                            window.createWorld = function(worldName) { qt.pyBridge.createWorld(worldName); };
-                            
-                            // 设置功能
-                            window.setSetting = function(key, value, category) { 
-                                qt.pyBridge.setSetting(key, value, category); 
+                # 先注入 qwebchannel.js
+                js_code = '''
+                    (function() {
+                        if (!window.QWebChannel) {
+                            var script = document.createElement('script');
+                            script.src = 'qrc:///qtwebchannel/qwebchannel.js';
+                            script.onload = function() {
+                                // QWebChannel加载完成后初始化
+                                new QWebChannel(qt.webChannelTransport, function(channel) {
+                                    window.pyBridge = channel.objects.pyBridge;
+
+                                    // 初始化功能
+                                    window.closeApp = function() { 
+                                        try {
+                                            window.pyBridge.closeApp(); 
+                                        } catch (e) {
+                                            console.error('关闭应用失败:', e);
+                                            console.log("__CLOSE_APP__");
+                                        }
+                                    };
+
+                                    // 获取游戏列表功能
+                                    window.getGamesList = function() {
+                                        try {
+                                            return JSON.parse(window.pyBridge.getGamesList());
+                                        } catch (e) {
+                                            console.error('获取游戏列表失败:', e);
+                                            return [];
+                                        }
+                                    };
+
+                                    // 监听游戏列表更新
+                                    window.pyBridge.gamesListChanged.connect(function(gamesList) {
+                                        try {
+                                            const games = JSON.parse(gamesList);
+                                            window.dispatchEvent(new CustomEvent('gamesListUpdated', { 
+                                                detail: games,
+                                                bubbles: true,
+                                                cancelable: true 
+                                            }));
+                                        } catch (e) {
+                                            console.error('处理游戏列表更新失败:', e);
+                                        }
+                                    });
+
+                                    // 触发初始化完成事件
+                                    window.dispatchEvent(new CustomEvent('pyBridgeReady', { 
+                                        bubbles: true,
+                                        cancelable: true 
+                                    }));
+
+                                    console.log('PyBridge 初始化完成');
+                                });
                             };
-                            window.getSetting = function(key, category, defaultValue) { 
-                                return qt.pyBridge.getSetting(key, category, defaultValue); 
-                            };
-                            
-                            // 实用功能
-                            window.openGameFolder = function() { qt.pyBridge.openGameFolder(); };
-                            window.openUrl = function(url) { qt.pyBridge.openUrl(url); };
-                            
-                            // 获取数据
-                            window.getInstalledGames = function() { 
-                                return qt.pyBridge.getInstalledGames(); 
-                            };
-                            window.getGameWorlds = function() { 
-                                return qt.pyBridge.getGameWorlds(); 
-                            };
-                        } else {
-                            console.log("Python功能不可用");
+                            document.head.appendChild(script);
                         }
                     })();
-                ''')
+                '''
+                self.browser.page().runJavaScript(js_code)
             
-            self.browser.loadFinished.connect(lambda ok: inject_js())
+            def delayed_inject():
+                # 延迟200ms执行注入，确保页面完全加载
+                QTimer.singleShot(200, inject_js)
+            
+            self.browser.loadFinished.connect(lambda ok: delayed_inject() if ok else log("页面加载失败", "Error"))
         except Exception as e:
-            print(f"WebChannel初始化错误: {e}")
+            log(f"WebChannel初始化错误: {e}", "Error")
     
     def add_game(self, game_data):
         """添加游戏到已安装列表"""
+        log(f"开始添加游戏: {game_data['id']}", "WebPages/Info")
         # 检查是否已存在
         if not any(game['id'] == game_data['id'] for game in self.installed_games):
-            log(f"添加新游戏: {game_data['id']}")
+            log(f"添加新游戏: {game_data['id']}", "WebPages/Info")
             self.installed_games.append(game_data)
             self.save_games()
-    
+        else:
+            log(f"游戏已存在，跳过添加: {game_data['id']}", "WebPages/Info")
+
     def update_game(self, game_data):
         """更新游戏信息"""
+        log(f"更新游戏信息: {game_data['id']}", "WebPages/Info")
         for i, game in enumerate(self.installed_games):
             if game['id'] == game_data['id']:
-                log(f"更新游戏信息: {game_data['id']}")
+                log(f"更新游戏信息: {game_data['id']}", "WebPages/Info")
                 self.installed_games[i] = game_data
                 self.save_games()
                 break
-    
+        else:
+            log(f"未找到要更新的游戏: {game_data['id']}", "WebPages/Warning")
+
     def get_game(self, game_id):
         """获取指定游戏"""
-        for game in self.installed_games:
-            if game['id'] == game_id:
-                log(f"获取游戏信息: {game_id}")
-                return game
-        log(f"游戏未找到: {game_id}", "Warning")
-        return None
-    
-    def add_world(self, world_data):
-        """添加游戏世界"""
-        log(f"添加新世界: {world_data['name']}")
-        self.game_worlds.append(world_data)
-        self.save_worlds()
-    
+        game = next((game for game in self.installed_games if game['id'] == game_id), None)
+        if game:
+            log(f"找到游戏: {game_id}", "WebPages/Info")
+        else:
+            log(f"未找到游戏: {game_id}", "WebPages/Warning")
+        return game
+
     def load_games(self):
         """加载已安装游戏列表"""
+        log("开始加载游戏列表", "WebPages/Info")
         try:
-            if Path(GAMES_FILE).exists():
-                with open(GAMES_FILE, 'r') as f:
-                    games = json.load(f)
-                    log(f"已加载 {len(games)} 个游戏")
-                    return games
+            if not Path(GAMES_FILE).exists():
+                # 如果文件不存在，创建一个空的游戏列表文件
+                log(f"创建新的游戏列表文件: {GAMES_FILE}", "WebPages/Info")
+                with open(GAMES_FILE, 'w', encoding='utf-8') as f:
+                    json.dump([], f, ensure_ascii=False, indent=4)
+                return []
+            
+            with open(GAMES_FILE, 'r', encoding='utf-8') as f:
+                games = json.load(f)
+                log(f"已加载 {len(games)} 个游戏", "WebPages/Info")
+                return games
         except Exception as e:
             log(f"加载游戏列表失败: {e}", "Error")
-        return []
-    
+            return []
+
     def save_games(self):
         """保存游戏列表"""
+        log("开始保存游戏列表", "WebPages/Info")
         try:
-            with open(GAMES_FILE, 'w') as f:
-                json.dump(self.installed_games, f)
-                log("游戏列表已保存")
+            with open(GAMES_FILE, 'w', encoding='utf-8') as f:
+                json.dump(self.installed_games, f, ensure_ascii=False, indent=4)
+                log("游戏列表已保存", "WebPages/Info")
         except Exception as e:
             log(f"保存游戏列表失败: {e}", "Error")
-    
+
     def load_worlds(self):
         """加载游戏世界列表"""
+        log("开始加载世界列表", "WebPages/Info")
         try:
-            if Path(WORLDS_FILE).exists():
-                with open(WORLDS_FILE, 'r') as f:
-                    worlds = json.load(f)
-                    log(f"已加载 {len(worlds)} 个世界")
-                    return worlds
+            if not Path(WORLDS_FILE).exists():
+                # 如果文件不存在，创建一个空的世界列表文件
+                log(f"创建新的世界列表文件: {WORLDS_FILE}", "WebPages/Info")
+                with open(WORLDS_FILE, 'w', encoding='utf-8') as f:
+                    json.dump([], f, ensure_ascii=False, indent=4)
+                return []
+            
+            with open(WORLDS_FILE, 'r', encoding='utf-8') as f:
+                worlds = json.load(f)
+                log(f"已加载 {len(worlds)} 个世界", "WebPages/Info")
+                return worlds
         except Exception as e:
             log(f"加载世界列表失败: {e}", "Error")
-        return []
-    
+            return []
+
     def save_worlds(self):
         """保存世界列表"""
+        log("开始保存世界列表", "WebPages/Info")
         try:
-            with open(WORLDS_FILE, 'w') as f:
-                json.dump(self.game_worlds, f)
-                log("世界列表已保存")
+            with open(WORLDS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(self.game_worlds, f, ensure_ascii=False, indent=4)
+                log("世界列表已保存", "WebPages/Info")
         except Exception as e:
             log(f"保存世界列表失败: {e}", "Error")
-    
+
     def update_mask(self):
         """更新窗口圆角遮罩"""
+        log("更新窗口遮罩", "Info")
         path = QPainterPath()
         path.addRoundedRect(0, 0, self.width(), self.height(), 18, 18)
         region = QRegion(path.toFillPolygon().toPolygon())
         self.setMask(region)
-    
+
     def resizeEvent(self, event):
         """窗口大小改变时更新遮罩"""
+        log(f"窗口大小调整: {self.width()}x{self.height()}", "Info")
         self.update_mask()
         super().resizeEvent(event)
-    
-    def eventFilter(self, obj, event):
-        """事件过滤器处理鼠标事件"""
-        if obj == self.browser:
-            # 处理鼠标按下事件
-            if event.type() == QMouseEvent.MouseButtonPress:
-                return self.handle_mouse_press(event)
-            
-            # 处理鼠标移动事件
-            elif event.type() == QMouseEvent.MouseMove:
-                return self.handle_mouse_move(event)
-            
-            # 处理鼠标释放事件
-            elif event.type() == QMouseEvent.MouseButtonRelease:
-                return self.handle_mouse_release(event)
-        
-        return super().eventFilter(obj, event)
-    
+
     def handle_mouse_press(self, event):
         """处理鼠标按下事件"""
         if event.button() == Qt.LeftButton:
+            log(f"鼠标按下位置: {event.pos()}", "WebPages/Info")
             # 获取鼠标在标题栏区域的位置
             element = self.browser.page().hitTestContent(event.pos())
             
@@ -443,38 +452,43 @@ class MainWindow(QMainWindow):
             if element.elementId() == "custom-titlebar" or element.parentElementId() == "custom-titlebar":
                 # 排除关闭按钮
                 if element.elementId() != "close-btn":
+                    log("检测到标题栏拖拽开始", "WebPages/Info")
                     self.dragging = True
                     self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
                     event.accept()
                     return True
         
         return False
-    
+
     def handle_mouse_move(self, event):
         """处理鼠标移动事件"""
         if self.dragging and event.buttons() & Qt.LeftButton:
+            log(f"窗口拖拽移动: {event.globalPos()}", "WebPages/Info")
             self.move(event.globalPos() - self.drag_position)
             event.accept()
             return True
         
         return False
-    
+
     def handle_mouse_release(self, event):
         """处理鼠标释放事件"""
         if event.button() == Qt.LeftButton and self.dragging:
+            log("检测到标题栏拖拽结束", "WebPages/Info")
             self.dragging = False
             event.accept()
             return True
         
         return False
-    
+
     def on_js_console_message(self, level, message, line, sourceID):
         """处理JavaScript控制台消息"""
         if message == "__CLOSE_APP__":
+            log("收到JS关闭请求", "WebPages/Info")
             self.close()
+        else:
+            log(f"JS控制台消息: {message} (行{line})", "WebPages/Info")
 
 if __name__ == "__main__":
-    init_log()  # 初始化日志
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()

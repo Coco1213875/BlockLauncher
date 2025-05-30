@@ -29,16 +29,17 @@
         <div>版本: CraftLauncher v1.2.0</div>
     </div>
     <script>
-        // 加载游戏列表
-        function loadGames() {
-            if (window.getInstalledGames) {
-                const games = JSON.parse(window.getInstalledGames());
+        // 加载游戏列表        function loadGames() {
+            if (window.pyBridge && window.getGamesList) {
+                const games = window.getGamesList();
                 renderGames(games);
-            } else if (window.qt && qt.pyBridge && qt.pyBridge.getInstalledGames) {
-                qt.pyBridge.getInstalledGames(function(result) {
-                    const games = JSON.parse(result);
+            } else if (window.qt && qt.pyBridge && qt.pyBridge.getGamesList) {
+                try {
+                    const games = JSON.parse(qt.pyBridge.getGamesList());
                     renderGames(games);
-                });
+                } catch (e) {
+                    console.error("获取游戏列表失败:", e);
+                }
             } else {
                 console.error("无法获取游戏列表");
                 // 回退到静态内容
@@ -155,6 +156,24 @@
                 // 这里可以添加过滤逻辑
                 loadGames();
             });
+        });
+
+        // 监听游戏列表更新
+        window.addEventListener('gamesListUpdated', function(event) {
+            renderGames(event.detail);
+        });
+
+        // 监听PyBridge就绪事件
+        window.addEventListener('pyBridgeReady', function() {
+            console.log('PyBridge已就绪，开始加载游戏列表');
+            loadGames();
+        });
+
+        // 页面加载完成时尝试加载游戏列表
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.pyBridge || (window.qt && qt.pyBridge)) {
+                loadGames();
+            }
         });
     </script>
 </body>

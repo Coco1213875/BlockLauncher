@@ -7,19 +7,34 @@ import subprocess
 import os
 from pathlib import Path
 from datetime import datetime
+import threading
 
-
+# 创建日志锁确保线程安全
+log_lock = threading.Lock()
 
 def log(message, mode="Info"):
+    """增强型日志记录函数，支持多线程安全和详细日志格式"""
     timestamp = datetime.now().strftime("%H%M%S")
-    try :
-        print(f"[{timestamp}] | [{mode}] {message}", flush=True)
-        with open("BL.log", "a") as f:
-            f.write(f"[{timestamp}] | [{mode}] {message}\n")
+    try:
+        # 统一日志格式
+        log_line = f"[{timestamp}] | [{mode}] {message}"
+        
+        # 控制台输出带颜色
+        if mode.lower() == "error":
+            print(f"\033[91m{log_line}\033[0m", flush=True)
+        elif mode.lower() == "warning":
+            print(f"\033[93m{log_line}\033[0m", flush=True)
+        else:
+            print(log_line, flush=True)
+            
+        # 文件写入（线程安全）
+        with log_lock:
+            with open("BL.log", "a", encoding="utf-8") as f:
+                f.write(log_line + "\n")
     except Exception as e:
-        print(f"[{timestamp}] | [Error] 错误地引用log函数: {e}", flush=True)
-        with open("BL.log", "a") as f:
-            f.write(f"[{timestamp}] | [Error] 错误地引用log函数: {e}\n")
+        # 失败回退到基础输出
+        print(f"[ERROR] 日志记录失败: {str(e)}", flush=True)
+        print(f"原始消息: {message}", flush=True)
 
 class MinecraftLauncherGenerator:
     def __init__(self, version, loader_type="vanilla", player_name="Steve", loader_version=None):
@@ -329,3 +344,4 @@ if __name__ == "__main__":
     with open("launch.bat", "w") as f:
         f.write(f"{config['java_path']} {' '.join(config['jvm_args'])} {' '.join(config['game_args'])}")
     log("启动脚本生成完成.")
+
