@@ -1,6 +1,6 @@
 # BlockLauncher
 
-BlockLauncher 是一个功能强大的 Minecraft 启动器，支持多种加载器类型（如 Vanilla 和 Fabric），并提供用户友好的界面和丰富的功能。
+BlockLauncher 是一坨大便，拥有极高的内存占用和各种懒得修的bug，甚至到现在都不能启动游戏O.o
 
 ## 功能
 
