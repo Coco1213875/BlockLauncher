@@ -1,8 +1,39 @@
-/* custom-colors.css - 可自定义的按钮颜色（默认绿色） */
+/* custom-colors.css - 统一设计系统的色彩方案 */
 :root {
-    /* 可自定义的强调色（默认绿色）*/
+    /* 主色系 - 绿色系 */
     --accent: #4CAF50;
     --accent-light: #66BB6A;
+    --accent-dark: #388E3C;
+    
+    /* 暗色系背景 */
+    --bg-primary: #121212;
+    --bg-secondary: #1a1a1a;
+    --bg-tertiary: #212121;
+    
+    /* 文本颜色 */
+    --text-primary: #FFFFFF;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-disabled: rgba(255, 255, 255, 0.5);
+
+    /* 其他颜色 */
+    --error: #f44336;
+    --warning: #ff9800;
+    --info: #2196f3;
+    --success: #4caf50;
+    
+    /* 边框和分割线 */
+    --divider: rgba(255, 255, 255, 0.12);
+    --border: rgba(255, 255, 255, 0.23);
+    
+    /* 阴影 */
+    --shadow-1: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    --shadow-2: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+    --shadow-3: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+    
+    /* 布局 */
+    --spacing-unit: 8px;
+    --border-radius: 4px;
+    --transition-duration: 0.3s;
 }
 
 /* 可交互元素样式 */

@@ -8,33 +8,26 @@ import os
 from pathlib import Path
 from datetime import datetime
 import threading
+import logging
 
-# 创建日志锁确保线程安全
-log_lock = threading.Lock()
+# 设置日志
+logger = logging.getLogger(__name__)
 
 def log(message, mode="Info"):
     """增强型日志记录函数，支持多线程安全和详细日志格式"""
-    timestamp = datetime.now().strftime("%H%M%S")
-    try:
-        # 统一日志格式
-        log_line = f"[{timestamp}] | [{mode}] {message}"
-        
-        # 控制台输出带颜色
-        if mode.lower() == "error":
-            print(f"\033[91m{log_line}\033[0m", flush=True)
-        elif mode.lower() == "warning":
-            print(f"\033[93m{log_line}\033[0m", flush=True)
-        else:
-            print(log_line, flush=True)
-            
-        # 文件写入（线程安全）
-        with log_lock:
-            with open("BL.log", "a", encoding="utf-8") as f:
-                f.write(log_line + "\n")
-    except Exception as e:
-        # 失败回退到基础输出
-        print(f"[ERROR] 日志记录失败: {str(e)}", flush=True)
-        print(f"原始消息: {message}", flush=True)
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    log_line = f"[{timestamp}] | [{mode}] {message}"
+    
+    # 控制台输出带颜色
+    if mode.lower() == "error":
+        print(f"\033[91m{log_line}\033[0m", flush=True)
+        logger.error(message)
+    elif mode.lower() == "warning":
+        print(f"\033[93m{log_line}\033[0m", flush=True)
+        logger.warning(message)
+    else:
+        print(log_line, flush=True)
+        logger.info(message)
 
 class MinecraftLauncherGenerator:
     def __init__(self, version, loader_type="vanilla", player_name="Steve", loader_version=None):
@@ -62,8 +55,9 @@ class MinecraftLauncherGenerator:
             if entry["id"] == self.version:
                 version_url = entry["url"]
                 version_response = requests.get(version_url)
-                log(f"获取完成: {version_response.json}")
+                version_response.raise_for_status()
                 return version_response.json()
+        
         log(f"版本 {self.version} 不存在", "Error")
         raise ValueError(f"版本 {self.version} 不存在")
 
@@ -97,15 +91,21 @@ class MinecraftLauncherGenerator:
     def _fetch_fabric_metadata(self):
         """获取Fabric加载器元数据"""
         log(f"正在获取 Fabric 加载器元数据...")
+        if not self.loader_version:
+            # 获取最新的Fabric版本
+            loader_url = "https://meta.fabricmc.net/v2/versions/loader"
+            response = requests.get(loader_url)
+            response.raise_for_status()
+            self.loader_version = response.json()[0]["version"]
+            log(f"使用最新Fabric版本: {self.loader_version}")
+        
         fabric_url = f"https://meta.fabricmc.net/v2/versions/loader/{self.version}/{self.loader_version}/profile/json"
         response = requests.get(fabric_url)
         response.raise_for_status()
-        log(f"获取完成: {response.json}")
         return response.json()
 
     def _check_library_compatibility(self, lib):
         """检查库兼容性规则"""
-        log(f"正在检查库 {lib['name']} 的兼容性规则...")
         rules = lib.get("rules", [])
         if not rules:
             return True
@@ -134,36 +134,36 @@ class MinecraftLauncherGenerator:
                 applicable = True
                 allow = (rule["action"] == "allow")
         
-        log(f"库 {lib['name']} 的兼容性规则结果: {allow}")
-
         return allow if applicable else True  # 默认允许未匹配规则的库
 
     def _download_file(self, url, target_path, sha1=None):
         """通用文件下载方法"""
-        log(f"正在下载 {url} 到 {target_path}")
         target_path.parent.mkdir(parents=True, exist_ok=True)
         if target_path.exists():
             if sha1:
                 existing_hash = hashlib.sha1(target_path.read_bytes()).hexdigest()
                 if existing_hash == sha1:
-                    return
+                    return True
                 log(f"文件已损坏, 正在删除: {target_path}", "Warning")
                 target_path.unlink()  # 删除损坏的文件
 
-        response = requests.get(url)
+        response = requests.get(url, stream=True)
         response.raise_for_status()
-        content = response.content
+        
+        # 分块写入文件
+        with open(target_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
         
         # 哈希校验
         if sha1:
-            log(f"正在校验 {target_path} 的哈希值...")
-            file_hash = hashlib.sha1(content).hexdigest()
+            file_hash = hashlib.sha1(target_path.read_bytes()).hexdigest()
             if file_hash != sha1:
                 log(f"文件校验失败: {target_path} (预期: {sha1} 实际: {file_hash})", "Error")
-                raise ValueError(f"文件校验失败: {target_path} (预期: {sha1} 实际: {file_hash})")
-
-        target_path.write_bytes(content)
-        log(f"下载完成: {target_path}")
+                target_path.unlink()
+                return False
+        return True
 
     def generate_launch_script(self):
         """生成启动命令"""
@@ -200,40 +200,68 @@ class MinecraftLauncherGenerator:
             "game_args": game_args
         }
 
-    def generate_install_script(self):
+    def generate_install_script(self, progress_callback=None):
         """生成安装脚本，带进度反馈"""
         log("开始安装 Minecraft 游戏文件...")
         # 创建基础目录
         (self.minecraft_dir / "versions" / self.version).mkdir(parents=True, exist_ok=True)
         (self.minecraft_dir / "assets" / "objects").mkdir(parents=True, exist_ok=True)
-        log("基础目录创建完成.")
+        
+        # 更新进度
+        if progress_callback:
+            progress_callback(0, "创建目录结构")
+        
         # 下载客户端JAR
         client_jar = self.minecraft_dir / "versions" / self.version / f"{self.version}.jar"
-        self._download_file(
+        if not self._download_file(
             self.client_download["url"],
             client_jar,
             self.client_download["sha1"]
-        )
-        log("客户端JAR文件下载完成.")
+        ):
+            raise Exception("客户端JAR下载失败")
+        
+        # 更新进度
+        if progress_callback:
+            progress_callback(5, "下载客户端文件")
+        
         # 下载资源索引
         asset_index_file = self.minecraft_dir / "assets" / "indexes" / f"{self.asset_index}.json"
-        self._download_file(
+        if not self._download_file(
             self.version_meta["assetIndex"]["url"],
             asset_index_file
-        )
-        log("资源索引文件下载完成.")
+        ):
+            raise Exception("资源索引下载失败")
+        
+        # 更新进度
+        if progress_callback:
+            progress_callback(10, "下载资源索引")
+        
         # 下载所有资源文件（带进度）
         with open(asset_index_file, "r", encoding="utf-8") as f:
             assets = json.load(f)["objects"]
             total = len(assets)
-            for idx, asset in enumerate(assets.values()):
+            for idx, (asset_name, asset) in enumerate(assets.items()):
                 hash_ = asset["hash"]
                 url = f"https://resources.download.minecraft.net/{hash_[:2]}/{hash_}"
                 path = self.minecraft_dir / "assets" / "objects" / hash_[:2] / hash_
-                self._download_file(url, path, hash_)
-                percent = int((idx + 1) / total * 100)
-                log(f"资源下载进度: {percent}%")
-        log("所有资源文件下载完成.")
+                
+                # 跳过已存在且校验通过的文件
+                if path.exists():
+                    if hashlib.sha1(path.read_bytes()).hexdigest() == hash_:
+                        continue
+                
+                if not self._download_file(url, path, hash_):
+                    log(f"资源下载失败: {asset_name}", "Warning")
+                
+                # 更新进度
+                if progress_callback and idx % 100 == 0:
+                    percent = min(10 + int((idx + 1) / total * 80), 85)
+                    progress_callback(percent, f"下载资源文件 ({idx+1}/{total})")
+        
+        # 更新进度
+        if progress_callback:
+            progress_callback(85, "资源文件下载完成")
+        
         # 下载原生库文件（带进度）
         libs = [lib for lib in self.version_meta["libraries"] if self._check_library_compatibility(lib) and "downloads" in lib]
         total_libs = len(libs)
@@ -242,7 +270,9 @@ class MinecraftLauncherGenerator:
             if "artifact" in lib["downloads"]:
                 artifact = lib["downloads"]["artifact"]
                 lib_path = self.minecraft_dir / "libraries" / artifact["path"]
-                self._download_file(artifact["url"], lib_path, artifact["sha1"])
+                if not self._download_file(artifact["url"], lib_path, artifact["sha1"]):
+                    log(f"库文件下载失败: {artifact['path']}", "Warning")
+            
             # 下载原生库
             if "classifiers" in lib["downloads"]:
                 natives = lib["natives"]
@@ -250,10 +280,18 @@ class MinecraftLauncherGenerator:
                 if platform_key in natives:
                     classifier = lib["downloads"]["classifiers"][natives[platform_key]]
                     native_path = self.minecraft_dir / "libraries" / classifier["path"]
-                    self._download_file(classifier["url"], native_path, classifier["sha1"])
-            percent = int((idx + 1) / total_libs * 100)
-            log(f"库下载进度: {percent}%")
-        log("所有库文件下载完成.")
+                    if not self._download_file(classifier["url"], native_path, classifier["sha1"]):
+                        log(f"原生库下载失败: {classifier['path']}", "Warning")
+            
+            # 更新进度
+            if progress_callback and idx % 5 == 0:
+                percent = min(85 + int((idx + 1) / total_libs * 10), 95)
+                progress_callback(percent, f"下载库文件 ({idx+1}/{total_libs})")
+        
+        # 更新进度
+        if progress_callback:
+            progress_callback(95, "库文件下载完成")
+        
         # 处理Fabric加载器
         if self.loader_type == "fabric":
             fabric_meta = self._fetch_fabric_metadata()
@@ -264,16 +302,28 @@ class MinecraftLauncherGenerator:
                 jar_name = f"{artifact}-{version}.jar"
                 lib_path = self.minecraft_dir / "libraries" / \
                     group.replace(".", "/") / artifact / version / jar_name
+                
+                # 跳过已存在的文件
+                if lib_path.exists():
+                    continue
+                    
                 url = f"https://maven.fabricmc.net/{group.replace('.', '/')}/{artifact}/{version}/{jar_name}"
-                self._download_file(url, lib_path, lib.get("sha1"))
-                percent = int((idx + 1) / total_fabric * 100)
-                log(f"Fabric库下载进度: {percent}%")
-        log("Fabric加载器处理完成.")
+                if not self._download_file(url, lib_path, lib.get("sha1")):
+                    log(f"Fabric库下载失败: {lib['name']}", "Warning")
+                
+                # 更新进度
+                if progress_callback and idx % 5 == 0:
+                    percent = min(95 + int((idx + 1) / total_fabric * 5), 100)
+                    progress_callback(percent, f"下载Fabric文件 ({idx+1}/{total_fabric})")
+        
+        # 更新进度
+        if progress_callback:
+            progress_callback(100, "安装完成")
+        
         log("安装脚本生成完成.")
 
     def _detect_java(self):
         """自动检测Java 17+路径"""
-        log("正在自动检测Java 17+路径...")
         # 检查JAVA_HOME
         if java_home := os.environ.get("JAVA_HOME"):
             possible_paths = [
@@ -287,20 +337,17 @@ class MinecraftLauncherGenerator:
 
         # 平台特定搜索
         if sys.platform == "win32":
-            log("正在使用Windows平台特定搜索...")
             search_paths = [
                 Path("C:/Program Files/Java/jdk-17/bin/java.exe"),
                 Path("C:/Program Files/Java/jdk-21/bin/java.exe"),
                 Path("C:/Program Files (x86)/Java/jdk-17/bin/java.exe")
             ]
         elif sys.platform == "darwin":
-            log("正在使用macOS平台特定搜索...")
             search_paths = [
                 Path("/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home/bin/java"),
                 Path("/usr/local/opt/openjdk@17/bin/java")
             ]
         else:  # Linux
-            log("正在使用Linux平台特定搜索...")
             search_paths = [
                 Path("/usr/lib/jvm/java-17-openjdk/bin/java"),
                 Path("/usr/lib/jvm/java-21-openjdk/bin/java")
@@ -312,7 +359,6 @@ class MinecraftLauncherGenerator:
                 return path
 
         # 尝试PATH环境变量
-        log("正在尝试PATH环境变量...")
         try:
             result = subprocess.run(
                 ["java", "-version"],
@@ -327,21 +373,3 @@ class MinecraftLauncherGenerator:
         
         log("未找到Java 17或更高版本, 请安装JDK并设置JAVA_HOME", "Error")
         raise RuntimeError("未找到Java 17或更高版本, 请安装JDK并设置JAVA_HOME")
-
-if __name__ == "__main__":
-    log("正在启动Minecraft启动器生成器...")
-    # 使用示例：生成1.20.4 Vanilla启动配置
-    launcher = MinecraftLauncherGenerator(
-        version="1.20.1",
-        player_name="Steve"
-    )
-    log("开始生成安装Minecraft...")
-    launcher.generate_install_script()
-    log("安装Minecraft完成, 开始生成启动脚本...")
-    config = launcher.generate_launch_script()
-    print("启动命令：")
-    print(f"{config['java_path']} {' '.join(config['jvm_args'])} {' '.join(config['game_args'])}")
-    with open("launch.bat", "w") as f:
-        f.write(f"{config['java_path']} {' '.join(config['jvm_args'])} {' '.join(config['game_args'])}")
-    log("启动脚本生成完成.")
-

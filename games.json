@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1.20.4_vanilla_Steve",
+    "version": "1.20.4",
+    "player_name": "Steve",
+    "loader_type": "vanilla",
+    "last_played": "",
+    "play_count": 0
+  },
+  {
+    "id": "1.20.4_fabric_Steve",
+    "version": "1.20.4",
+    "player_name": "Steve",
+    "loader_type": "fabric",
+    "last_played": "",
+    "play_count": 0
+  },
+  {
+    "id": "1.19.4_vanilla_Alex",
+    "version": "1.19.4",
+    "player_name": "Alex",
+    "loader_type": "vanilla",
+    "last_played": "",
+    "play_count": 0
+  }
+]

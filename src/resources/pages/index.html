@@ -8,17 +8,87 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Minecraftia&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="custom-colors.css">
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
-<body>
-    <div id="custom-titlebar" style="position:fixed;top:0;left:0;width:100vw;height:40px;z-index:9999;display:flex;align-items:center;justify-content:flex-end;background:rgba(18,18,18,0.7);-webkit-app-region:drag;">
-        <button id="close-btn" style="margin-right:16px;width:32px;height:32px;border:none;border-radius:16px;background:rgba(229,57,53,0.8);color:#fff;font-size:20px;cursor:pointer;-webkit-app-region:no-drag;">✕</button>
-    </div>
+<body>    
+    <div id="custom-titlebar">
+        <div class="window-title">BlockLauncher</div>
+        <div class="window-controls">
+            <button id="minimize-btn" class="control-btn">—</button>
+            <button id="close-btn" class="control-btn">×</button>
+        </div>    
+    </div>    
     <script>
-        // 关闭按钮
-        document.getElementById('close-btn').onclick = function() {
-            if(window.closeApp) window.closeApp();
-            else console.log('__CLOSE_APP__');
-        };
+        let pyBridgeReady = false;
+        
+        // 初始化WebChannel
+        function initWebChannel() {
+            if (typeof QWebChannel === 'undefined') {
+                console.error('QWebChannel未定义，请确保正确加载了qwebchannel.js');
+                return;
+            }
+
+            if (window.qt && qt.webChannelTransport) {
+                console.log('WebChannel传输对象已就绪，开始初始化...');
+                new QWebChannel(qt.webChannelTransport, function(channel) {
+                    window.pyBridge = channel.objects.pyBridge;
+                    if (window.pyBridge) {
+                        console.log('WebChannel初始化成功');
+                        pyBridgeReady = true;
+                        window.pyBridge.ping().then(function(result) {
+                            console.log('WebChannel连接测试：', result);
+                            initializeControls();
+                        }).catch(function(error) {
+                            console.error('WebChannel连接测试失败：', error);
+                        });
+                    } else {
+                        console.error('无法获取pyBridge对象');
+                    }
+                });
+            } else {
+                console.log('等待WebChannel传输对象...');
+            }
+        }
+        
+        function initializeControls() {
+            console.log('正在初始化窗口控制按钮...');
+            
+            // 最小化按钮点击事件
+            document.getElementById('minimize-btn').onclick = function() {
+                if (!pyBridgeReady) {
+                    console.error('pyBridge未就绪，无法最小化窗口');
+                    return;
+                }
+                console.log('点击最小化按钮');
+                window.pyBridge.minimizeWindow();
+            };
+
+            // 关闭按钮点击事件
+            document.getElementById('close-btn').onclick = function() {
+                if (!pyBridgeReady) {
+                    console.error('pyBridge未就绪，无法关闭窗口');
+                    return;
+                }
+                console.log('点击关闭按钮');
+                window.pyBridge.closeApp();
+            };
+            
+            console.log('窗口控制按钮初始化完成');
+        }
+
+        // 监听文档加载完成事件
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('文档加载完成，等待WebChannel初始化...');
+            initWebChannel();
+        });
+
+        // 每500ms检查一次WebChannel是否可用
+        setInterval(function() {
+            if (!pyBridgeReady && window.qt && qt.webChannelTransport) {
+                console.log('尝试重新初始化WebChannel...');
+                initWebChannel();
+            }
+        }, 500);
     </script>
     <div class="grid-bg"></div>
     <div class="container">

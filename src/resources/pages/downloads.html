@@ -74,8 +74,122 @@
             padding: 6px 16px; font-size: 0.95rem; cursor: pointer; transition: background .2s;
         }
         .download-actions button:hover { background: #444; }
+        
+        /* 日志对话框样式 */
+        .log-dialog {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1e2227;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            z-index: 1000;
+        }
+        .log-dialog-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .log-dialog-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .log-dialog-close {
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .log-dialog-close:hover {
+            color: #fff;
+        }
+        .log-dialog-content {
+            padding: 24px;
+            overflow-y: auto;
+            max-height: calc(80vh - 120px);
+        }
+        .log-dialog-content pre {
+            margin: 0;
+            padding: 16px;
+            background: #282c34;
+            border-radius: 8px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #abb2bf;
+        }
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .log-entry.info { color: #98c379; }
+        .log-entry.error { color: #e06c75; }
+        .log-entry.warning { color: #e5c07b; }
+        .dialog-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
     </style>
+    <!-- 添加日志对话框 -->
+    <div class="dialog-overlay" id="logOverlay"></div>
+    <div class="log-dialog" id="logDialog">
+        <div class="log-dialog-header">
+            <div class="log-dialog-title">下载详细信息</div>
+            <button class="log-dialog-close" onclick="closeLogDialog()">&times;</button>
+        </div>
+        <div class="log-dialog-content">
+            <pre id="logContent"></pre>
+        </div>
+    </div>
+    
     <script>
+        // 日志对话框相关函数
+        const logDialog = document.getElementById('logDialog');
+        const logOverlay = document.getElementById('logOverlay');
+        const logContent = document.getElementById('logContent');
+        
+        // 存储下载日志的对象
+        window.downloadLogs = {};
+        
+        function showLogDialog(gameId) {
+            const logs = window.downloadLogs[gameId] || [];
+            logContent.innerHTML = logs.map(log => 
+                `<div class="log-entry ${log.level.toLowerCase()}">[${log.time}] ${log.message}</div>`
+            ).join('\n');
+            
+            logDialog.style.display = 'block';
+            logOverlay.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            
+            // 滚动到底部
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+        
+        function closeLogDialog() {
+            logDialog.style.display = 'none';
+            logOverlay.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        
+        // 关闭对话框当点击遮罩层时
+        logOverlay.addEventListener('click', closeLogDialog);
+        
         // 下载新游戏按钮逻辑
         document.getElementById('add-download-btn').onclick = function() {
             let version = prompt('请输入要下载的Minecraft版本号（如1.20.4）：', '1.20.4');
@@ -84,6 +198,10 @@
             if(!player) return;
             let loaderType = prompt('请输入加载器类型（vanilla, fabric, forge）：', 'vanilla');
             if(!loaderType) loaderType = 'vanilla';
+            
+            const gameId = `${version}_${loaderType}_${player}`;
+            // 初始化该游戏的日志数组
+            window.downloadLogs[gameId] = [];
             
             // 创建UI卡片
             const grid = document.getElementById('downloads-grid');
@@ -104,65 +222,113 @@
                     </div>
                     <div class="download-actions">
                         <button class="cancel-btn"><i class="fas fa-times"></i> 取消</button>
+                        <button class="details-btn" onclick="showLogDialog('${gameId}')">
+                            <i class="fas fa-list-ul"></i> 详细
+                        </button>
                     </div>
                 </div>
             `;
             grid.prepend(card);
             
             // 绑定取消按钮
-            card.querySelector('.cancel-btn').onclick = function(){ 
-                card.remove();
-                // 实际应该通知后端取消下载
+            card.querySelector('.cancel-btn').onclick = function() { 
+                if (confirm('确定要取消下载吗？')) {
+                    card.remove();
+                    delete window.downloadLogs[gameId];
+                    // 实际应该通知后端取消下载
+                }
             };
             
-            // 调用后端真实下载
-            if(window.downloadGame){
-                window.downloadGame(version, player, loaderType);
-            } else if(window.qt && qt.pyBridge && qt.pyBridge.downloadGame){
-                qt.pyBridge.downloadGame(version, player, loaderType);
+            // 调用后端下载
+            if (window.pyBridge && window.pyBridge.downloadGame) {
+                window.pyBridge.downloadGame(version, player, loaderType, "");
             }
             
             // 监听进度
-            if(window.qt && qt.pyBridge && qt.pyBridge.downloadProgress){
-                const progressHandler = function(percent, msg){
+            if (window.pyBridge && window.pyBridge.downloadProgress) {
+                window.pyBridge.downloadProgress.connect(function(id, percent, msg) {
+                    if (id !== gameId) return;
+                    
                     const progressText = card.querySelector('.progress-text');
                     const progressBar = card.querySelector('.progress-bar');
                     const statusText = card.querySelector('.download-status');
+                    
                     if (progressText) progressText.textContent = percent + '%';
                     if (progressBar) progressBar.style.width = percent + '%';
                     if (statusText) statusText.textContent = msg;
-                };
-                qt.pyBridge.downloadProgress.connect(progressHandler);
+                    
+                    // 记录日志
+                    const now = new Date().toLocaleTimeString();
+                    window.downloadLogs[gameId].push({
+                        time: now,
+                        level: 'INFO',
+                        message: `${msg} (${percent}%)`
+                    });
+                });
             }
             
             // 监听下载完成
-            if(window.qt && qt.pyBridge && qt.pyBridge.downloadFinished){
-                const finishedHandler = function(status, gameId){
+            if (window.pyBridge && window.pyBridge.downloadFinished) {
+                window.pyBridge.downloadFinished.connect(function(id, status, msg) {
+                    if (id !== gameId) return;
+                    
                     const statusText = card.querySelector('.download-status');
+                    const now = new Date().toLocaleTimeString();
+                    
                     if (status === "success") {
                         statusText.textContent = '已完成';
                         statusText.className = 'download-status finished';
                         card.querySelector('.download-actions').innerHTML = `
-                            <button class="open-btn"><i class="fas fa-folder-open"></i> 打开文件夹</button>
+                            <button class="details-btn" onclick="showLogDialog('${gameId}')">
+                                <i class="fas fa-list-ul"></i> 详细
+                            </button>
                             <button class="delete-btn"><i class="fas fa-trash"></i> 删除</button>
                         `;
                         
-                        // 绑定新按钮
-                        card.querySelector('.open-btn').onclick = function() {
-                            if (window.openGameFolder) window.openGameFolder();
-                            else if (window.qt && qt.pyBridge && qt.pyBridge.openGameFolder) {
-                                qt.pyBridge.openGameFolder();
+                        window.downloadLogs[gameId].push({
+                            time: now,
+                            level: 'INFO',
+                            message: '下载完成！'
+                        });
+                        
+                        // 绑定删除按钮
+                        card.querySelector('.delete-btn').onclick = function() {
+                            if (confirm('确定要删除此记录吗？')) {
+                                card.remove();
+                                delete window.downloadLogs[gameId];
                             }
                         };
-                        card.querySelector('.delete-btn').onclick = function() {
-                            card.remove();
-                        };
                     } else {
-                        statusText.textContent = '下载失败';
+                        statusText.textContent = '下载失败: ' + msg;
                         statusText.className = 'download-status failed';
+                        
+                        window.downloadLogs[gameId].push({
+                            time: now,
+                            level: 'ERROR',
+                            message: '下载失败: ' + msg
+                        });
                     }
-                };
-                qt.pyBridge.downloadFinished.connect(finishedHandler);
+                });
+            }
+            
+            // 监听日志消息
+            if (window.pyBridge && window.pyBridge.logMessage) {
+                window.pyBridge.logMessage.connect(function(id, level, msg) {
+                    if (id !== gameId) return;
+                    
+                    // 添加新日志
+                    const now = new Date().toLocaleTimeString();
+                    window.downloadLogs[gameId].push({
+                        time: now,
+                        level: level,
+                        message: msg
+                    });
+                    
+                    // 如果日志对话框是打开的，更新内容
+                    if (logDialog.style.display === 'block') {
+                        showLogDialog(gameId);
+                    }
+                });
             }
         };
         

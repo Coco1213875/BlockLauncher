@@ -655,3 +655,116 @@ body::before {
 .game-card:nth-child(4) { animation-delay: 0.4s; }
 .game-card:nth-child(5) { animation-delay: 0.5s; }
 .game-card:nth-child(6) { animation-delay: 0.6s; }
+/* 标题栏样式 */
+#custom-titlebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 32px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--primary);
+    -webkit-app-region: drag;
+}
+
+.window-title {
+    margin-left: 12px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.window-controls {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    -webkit-app-region: no-drag;
+}
+
+.control-btn {
+    width: 46px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-app-region: no-drag;
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#minimize-btn {
+    font-weight: bold;
+    font-size: 18px;
+}
+
+#minimize-btn:hover {
+    color: white;
+}
+
+#close-btn:hover {
+    background: #e81123;
+    color: white;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--dark-bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--dark-bg-tertiary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-bg-hover);
+}
+
+/* 确保所有按钮有统一的过渡效果 */
+button {
+    transition: var(--transition-normal);
+}
+
+/* 统一卡片样式 */
+.card {
+    background: var(--dark-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-4);
+    box-shadow: var(--shadow-1);
+    transition: var(--transition-normal);
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-2);
+}
+
+/* 统一输入框样式 */
+input, select, textarea {
+    background: var(--dark-bg-tertiary);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    padding: var(--spacing-2) var(--spacing-3);
+    transition: var(--transition-normal);
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
