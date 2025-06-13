@@ -7,6 +7,82 @@
     <link rel="stylesheet" href="custom-colors.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Minecraftia&display=swap" rel="stylesheet">
+    <style>
+        .settings-section {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .settings-group {
+            margin-bottom: 20px;
+            background: rgba(33, 33, 33, 0.8);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .setting-item {
+            margin-bottom: 12px;
+        }
+
+        .setting-item input[type="text"],
+        .setting-item input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            background: rgba(33, 33, 33, 0.8);
+            border: 1px solid rgba(76, 175, 80, 0.2);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .setting-item button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .setting-item button:hover {
+            background: var(--accent-light);
+        }
+
+        .actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        .actions button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #save-settings-btn {
+            background: var(--accent);
+            color: white;
+        }
+        #save-settings-btn:hover {
+            background: var(--accent-light);
+            transform: translateY(-2px);
+        }
+        #reset-settings-btn {
+            background: #333;
+            color: #aaa;
+        }
+        #reset-settings-btn:hover {
+            background: #444;
+        }
+    </style>
 </head>
 <body>
     <div class="settings-section">
@@ -95,242 +171,8 @@
     <div class="footer-info">
         <div class="status-indicator">设置状态: <span id="settings-status">未保存</span></div>
     </div>
-    <style>
-        .settings-section { padding: 32px; }
-        .settings-container { max-width: 800px; margin: 0 auto; }
-        .settings-group {
-            background: rgba(33, 33, 33, 0.7);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 24px;
-            border: 1px solid rgba(76, 175, 80, 0.2);
-        }
-        .settings-group h3 {
-            color: var(--accent-light);
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .setting-item {
-            margin-bottom: 16px;
-            display: flex;
-            flex-direction: column;
-        }
-        .setting-item label {
-            margin-bottom: 8px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .setting-item input, .setting-item button {
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #444;
-            background: #1a1d23;
-            color: #fff;
-        }
-        .setting-item button {
-            background: var(--accent);
-            cursor: pointer;
-            transition: var(--transition);
-        }
-        .setting-item button:hover {
-            background: var(--accent-light);
-        }
-        .actions {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-            margin-top: 30px;
-        }
-        .actions button {
-            padding: 12px 30px;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        #save-settings-btn {
-            background: var(--accent);
-            color: white;
-        }
-        #save-settings-btn:hover {
-            background: var(--accent-light);
-            transform: translateY(-2px);
-        }
-        #reset-settings-btn {
-            background: #333;
-            color: #aaa;
-        }
-        #reset-settings-btn:hover {
-            background: #444;
-        }
-    </style>
     <script>
-        // 加载设置
-        function loadSettings() {
-            // Java路径
-            getSetting('java_path', 'game', '', function(value) {
-                document.getElementById('java-path').value = value;
-            });
-            
-            // Minecraft目录
-            getSetting('minecraft_dir', 'game', '.minecraft', function(value) {
-                document.getElementById('minecraft-dir').value = value;
-            });
-            
-            // 内存设置
-            getSetting('max_memory', 'game', '4096', function(value) {
-                document.getElementById('max-memory').value = value;
-            });
-            
-            getSetting('min_memory', 'game', '2048', function(value) {
-                document.getElementById('min-memory').value = value;
-            });
-            
-            // 玩家名称
-            getSetting('player_name', 'game', 'Steve', function(value) {
-                document.getElementById('player-name').value = value;
-            });
-            
-            // 下载设置
-            getSetting('download_threads', 'download', '4', function(value) {
-                document.getElementById('download-threads').value = value;
-            });
-            
-            getSetting('download_limit', 'download', '0', function(value) {
-                document.getElementById('download-limit').value = value;
-            });
-            
-            // 代理设置
-            getSetting('proxy_enable', 'network', 'false', function(value) {
-                document.getElementById('proxy-enable').checked = value === 'true';
-                document.getElementById('proxy-settings').style.display = 
-                    value === 'true' ? 'block' : 'none';
-            });
-            
-            getSetting('proxy_host', 'network', '', function(value) {
-                document.getElementById('proxy-host').value = value;
-            });
-            
-            getSetting('proxy_port', 'network', '', function(value) {
-                document.getElementById('proxy-port').value = value;
-            });
-            
-            getSetting('proxy_user', 'network', '', function(value) {
-                document.getElementById('proxy-user').value = value;
-            });
-            
-            getSetting('proxy_pass', 'network', '', function(value) {
-                document.getElementById('proxy-pass').value = value;
-            });
-        }
         
-        // 保存设置
-        function saveSettings() {
-            // 常规设置
-            setSetting('java_path', document.getElementById('java-path').value, 'game');
-            setSetting('minecraft_dir', document.getElementById('minecraft-dir').value, 'game');
-            setSetting('max_memory', document.getElementById('max-memory').value, 'game');
-            setSetting('min_memory', document.getElementById('min-memory').value, 'game');
-            setSetting('player_name', document.getElementById('player-name').value, 'game');
-            
-            // 下载设置
-            setSetting('download_threads', document.getElementById('download-threads').value, 'download');
-            setSetting('download_limit', document.getElementById('download-limit').value, 'download');
-            
-            // 网络设置
-            setSetting('proxy_enable', document.getElementById('proxy-enable').checked, 'network');
-            setSetting('proxy_host', document.getElementById('proxy-host').value, 'network');
-            setSetting('proxy_port', document.getElementById('proxy-port').value, 'network');
-            setSetting('proxy_user', document.getElementById('proxy-user').value, 'network');
-            setSetting('proxy_pass', document.getElementById('proxy-pass').value, 'network');
-            
-            // 更新状态
-            document.getElementById('settings-status').textContent = '已保存';
-            document.getElementById('settings-status').style.color = '#4CAF50';
-            
-            // 通知主页面更新用户名
-            if (window.parent.updateUsername) {
-                window.parent.updateUsername(document.getElementById('player-name').value);
-            }
-        }
-        
-        // 获取设置值
-        function getSetting(key, category, defaultValue, callback) {
-            if (window.getSetting) {
-                callback(window.getSetting(key, category, defaultValue));
-            } else if (window.qt && qt.pyBridge && qt.pyBridge.getSetting) {
-                qt.pyBridge.getSetting(key, category, defaultValue, callback);
-            } else {
-                callback(defaultValue);
-            }
-        }
-        
-        // 设置设置值
-        function setSetting(key, value, category) {
-            if (window.setSetting) {
-                window.setSetting(key, value, category);
-            } else if (window.qt && qt.pyBridge && qt.pyBridge.setSetting) {
-                qt.pyBridge.setSetting(key, value, category);
-            }
-        }
-        
-        // 浏览文件夹
-        function browseFolder(inputId) {
-            if (window.qt && qt.pyBridge && qt.pyBridge.openFolderDialog) {
-                qt.pyBridge.openFolderDialog(function(folder) {
-                    if (folder) {
-                        document.getElementById(inputId).value = folder;
-                    }
-                });
-            } else {
-                alert('文件夹浏览功能仅在应用内可用');
-            }
-        }
-        
-        // 初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            loadSettings();
-            
-            // 保存按钮
-            document.getElementById('save-settings-btn').onclick = saveSettings;
-            
-            // 重置按钮
-            document.getElementById('reset-settings-btn').onclick = function() {
-                if (confirm('确定要恢复默认设置吗？')) {
-                    // 清除设置
-                    if (window.qt && qt.pyBridge && qt.pyBridge.clearSettings) {
-                        qt.pyBridge.clearSettings();
-                    }
-                    loadSettings();
-                    document.getElementById('settings-status').textContent = '已恢复默认';
-                    document.getElementById('settings-status').style.color = '#FF9800';
-                }
-            };
-            
-            // 浏览Java路径
-            document.getElementById('browse-java-btn').onclick = function() {
-                browseFolder('java-path');
-            };
-            
-            // 浏览Minecraft目录
-            document.getElementById('browse-minecraft-btn').onclick = function() {
-                browseFolder('minecraft-dir');
-            };
-            
-            // 代理设置切换
-            document.getElementById('proxy-enable').addEventListener('change', function() {
-                document.getElementById('proxy-settings').style.display = 
-                    this.checked ? 'block' : 'none';
-            });
-        });
     </script>
 </body>
 </html>

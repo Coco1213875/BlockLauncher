@@ -5,9 +5,33 @@
     <title>首页</title>
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="custom-colors.css">
+    <style>
+        .welcome-section {
+            padding: 20px;
+            text-align: center;
+            background: rgba(33, 33, 33, 0.8);
+            border-radius: 8px;
+            margin: 0 auto;
+        }
+
+        .quick-actions button {
+            background: var(--accent);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .quick-actions button:hover {
+            background: var(--accent-light);
+        }
+    </style>
 </head>
 <body>
-    <div class="welcome-section" style="padding: 40px; text-align: center;">
+    <div class="welcome-section">
         <h1 style="font-size: 2.5rem; margin-bottom: 20px; color: var(--accent-light);">BlockLauncher</h1>
         <p style="font-size: 1.2rem; max-width: 800px; margin: 0 auto 30px; line-height: 1.6;">
             --开发者很懒，什么都没写--
@@ -34,7 +58,6 @@
                 <h3 style="color: var(--accent-light); margin-bottom: 15px;"><i class="fas fa-globe"></i> 新闻与更新</h3>
                 <div id="news-feed" style="font-size: 1.1rem; line-height: 1.8;">
                     <p><i class="fas fa-newspaper"></i> Minecraft 1.20.4 现已发布！</p>
-                    <p><i class="fas fa-newspaper"></i> 新的光影包支持已添加</p>
                     <p><i class="fas fa-newspaper"></i> 启动器 v1.3.0 更新日志</p>
                 </div>
                 <button style="margin-top: 15px; background: transparent; border: 1px solid var(--accent); color: var(--accent-light); padding: 8px 20px; border-radius: 50px; cursor: pointer;">
@@ -44,29 +67,26 @@
         </div>
     </div>
     <script>
-        // 加载游戏统计
+        // 优化游戏统计加载逻辑，减少 DOM 操作次数
         function loadGamesStats() {
-            if (window.getInstalledGames) {
-                const games = JSON.parse(window.getInstalledGames());
-                const stats = document.getElementById('games-stats');
-                
-                if (games.length > 0) {
-                    const totalGames = games.length;
-                    const playedGames = games.filter(g => g.last_played).length;
-                    const lastPlayed = games.reduce((latest, game) => {
-                        return (!latest || game.last_played > latest) ? game.last_played : latest;
-                    }, null);
-                    
-                    stats.innerHTML = `
-                        <p><i class="fas fa-cube"></i> 已安装游戏: ${totalGames} 个</p>
-                        <p><i class="fas fa-play-circle"></i> 已游玩游戏: ${playedGames} 个</p>
-                        <p><i class="fas fa-clock"></i> 最近游玩: ${lastPlayed || '从未游玩'}</p>
-                        <p><i class="fas fa-star"></i> 最受欢迎版本: ${getPopularVersion(games)}</p>
-                    `;
-                } else {
-                    stats.innerHTML = '<p>尚未安装任何游戏</p>';
-                }
-            }
+            if (!window.getInstalledGames) return;
+
+            const games = JSON.parse(window.getInstalledGames());
+            const stats = {
+                totalGames: games.length,
+                playedGames: games.filter(g => g.last_played).length,
+                lastPlayed: games.reduce((latest, game) => (!latest || game.last_played > latest) ? game.last_played : latest, null),
+                popularVersion: getPopularVersion(games)
+            };
+
+            const statsHTML = `
+                <p><i class="fas fa-cube"></i> 已安装游戏: ${stats.totalGames} 个</p>
+                <p><i class="fas fa-play-circle"></i> 已游玩游戏: ${stats.playedGames} 个</p>
+                <p><i class="fas fa-clock"></i> 最近游玩: ${stats.lastPlayed || '从未游玩'}</p>
+                <p><i class="fas fa-star"></i> 最受欢迎版本: ${stats.popularVersion}</p>
+            `;
+
+            document.getElementById('games-stats').innerHTML = statsHTML;
         }
         
         // 获取最受欢迎版本

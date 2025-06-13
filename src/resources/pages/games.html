@@ -7,6 +7,191 @@
     <link rel="stylesheet" href="custom-colors.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Minecraftia&display=swap" rel="stylesheet">
+    <style>
+        .games-section {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .filter-buttons button {
+            background: rgba(33, 33, 33, 0.8);
+            border: 1px solid rgba(76, 175, 80, 0.2);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .filter-buttons button:hover {
+            background: rgba(76, 175, 80, 0.15);
+            color: var(--accent-light);
+        }
+
+        /* 新增样式：游戏卡片 */
+        .game-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 10px 0;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        .game-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .game-banner {
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .game-icon {
+            font-size: 48px;
+            color: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .game-info {
+            padding: 15px;
+        }
+
+        .game-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 10px 0;
+            color: white;
+        }
+
+        .game-meta {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            margin: 0 0 10px 0;
+        }
+
+        .game-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .play-btn, .settings-btn {
+            background: rgba(76, 175, 80, 0.8);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .play-btn:hover, .settings-btn:hover {
+            background: rgba(76, 175, 80, 1);
+        }
+
+        .settings-btn {
+            background: rgba(33, 33, 33, 0.8);
+        }
+
+        .settings-btn:hover {
+            background: rgba(33, 33, 33, 1);
+        }
+
+        /* 新增样式：无游戏时的提示 */
+        .no-games {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .no-games h3 {
+            margin: 10px 0;
+            font-size: 1.5em;
+        }
+
+        .no-games p {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* 新增样式：错误信息 */
+        .error-message {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .error-message i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #f44336;
+        }
+
+        .error-message button {
+            margin-top: 20px;
+            padding: 8px 20px;
+            background: var(--accent);
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .error-message button:hover {
+            background: var(--accent-light);
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            background: rgba(33, 33, 33, 0.9);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .notification.success {
+            background: rgba(76, 175, 80, 0.9);
+        }
+
+        .notification.error {
+            background: rgba(244, 67, 54, 0.9);
+        }
+
+        .notification i {
+            font-size: 1.2em;
+        }
+    </style>
 </head>
 <body>
     <div class="games-section">
@@ -158,97 +343,428 @@
             bindGameCardEvents();
         }
 
-        // 绑定游戏卡片事件
+        // 优化游戏卡片事件绑定逻辑
         function bindGameCardEvents() {
-            // 启动按钮
-            document.querySelectorAll('.play-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const gameId = this.getAttribute('data-game-id');
-                    launchGame(gameId, this);
-                });
-            });
+            document.getElementById('games-grid').addEventListener('click', async (e) => {
+                const target = e.target;
+                const card = target.closest('.game-card');
+                if (!card) return;
 
-            // 设置按钮
-            document.querySelectorAll('.settings-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const gameId = this.getAttribute('data-game-id');
-                    // TODO: 实现游戏设置功能
-                    console.log("打开游戏设置:", gameId);
-                });
+                const gameId = card.dataset.gameId;
+                if (!gameId) return;
+
+                if (target.matches('.play-btn')) {
+                    await launchGame(gameId);
+                } else if (target.matches('.settings-btn')) {
+                    await openGameSettings(gameId);
+                }
             });
         }
 
-        // 启动游戏
-        function launchGame(gameId, button) {
-            console.log("准备启动游戏:", gameId);
-            const originalText = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 启动中...';
-            button.disabled = true;
-
+        async function launchGame(gameId) {
             try {
-                if (pyBridge && pyBridge.launchGame) {
-                    const success = pyBridge.launchGame(gameId);
-                    if (success) {
-                        button.innerHTML = '<i class="fas fa-check"></i> 已启动';
-                        setTimeout(() => {
-                            button.innerHTML = originalText;
-                            button.disabled = false;
-                        }, 2000);
-                    } else {
-                        throw new Error("启动失败");
-                    }
-                } else {
-                    throw new Error("pyBridge.launchGame 不可用");
+                if (!window.pyBridge || !window.pyBridge.launchGame) {
+                    throw new Error('pyBridge未就绪');
                 }
-            } catch (e) {
-                console.error("启动游戏失败:", e);
-                button.innerHTML = '<i class="fas fa-times"></i> 启动失败';
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                }, 2000);
+                
+                const success = await window.pyBridge.launchGame(gameId);
+                if (success) {
+                    showNotification('游戏启动成功', 'success');
+                } else {
+                    showNotification('游戏启动失败', 'error');
+                }
+            } catch (error) {
+                console.error('启动游戏失败:', error);
+                showNotification('启动游戏时发生错误', 'error');
+            }
+        }
+
+        async function openGameSettings(gameId) {
+            try {
+                const settings = document.querySelector('.nav-item[data-page="settings.html"]');
+                if (settings) {
+                    settings.click();
+                    // 可以通过URL参数传递gameId
+                    document.getElementById('page-frame').src = `settings.html?game=${gameId}`;
+                }
+            } catch (error) {
+                console.error('打开游戏设置失败:', error);
+                showNotification('无法打开游戏设置', 'error');
             }
         }
 
         // 显示默认内容
         function showFallbackContent() {
             document.getElementById('games-grid').innerHTML = `
-                <div class="game-card">
-                    <div class="game-banner" style="background: linear-gradient(45deg, #4CAF50, #2E7D32);">
-                        <div class="game-icon" style="background: #4CAF50;">
-                            <i class="fas fa-grass"></i>
-                        </div>
-                    </div>
-                    <div class="game-info">
-                        <div class="game-title">Minecraft 1.20.1</div>
-                        <div class="game-meta">
-                            <span>上次游玩: 暂无记录</span>
-                            <span class="game-version">正式版</span>
-                        </div>
-                        <div class="game-actions">
-                            <button class="play-btn" disabled>启动游戏</button>
-                            <button class="settings-btn" disabled>
-                                <i class="fas fa-cog"></i>
-                            </button>
-                        </div>
-                    </div>
+                <div class="no-games">
+                    <i class="fas fa-gamepad" style="font-size: 48px; margin-bottom: 20px;"></i>
+                    <h3>还没有安装任何游戏</h3>
+                    <p>点击"添加游戏"按钮开始您的游戏之旅</p>
                 </div>
             `;
         }
 
         // 初始化游戏过滤器
         function initFilters() {
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    const filter = this.getAttribute('data-filter');
-                    console.log("应用过滤器:", filter);
-                    // TODO: 实现过滤逻辑
-                    loadGames();
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            if (!filterButtons.length) return;
+
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    const filter = btn.dataset.filter;
+                    if (gameManager.virtualList) {
+                        const filteredGames = gameManager.filterGames(filter);
+                        gameManager.virtualList.setItems(filteredGames);
+                    }
                 });
             });
         }
+
+        // 性能优化：实现虚拟列表
+        class VirtualList {
+            constructor(container, itemHeight = 200) {
+                this.container = container;
+                this.itemHeight = itemHeight;
+                this.items = [];
+                this.visibleItems = new Set();
+                this.observer = new IntersectionObserver(
+                    entries => this.handleIntersection(entries),
+                    {
+                        root: null,
+                        rootMargin: '100px 0px',
+                        threshold: 0.1
+                    }
+                );
+
+                // 监听滚动事件
+                window.addEventListener('scroll', this.handleScroll.bind(this));
+                window.addEventListener('resize', this.handleScroll.bind(this));
+            }
+
+            setItems(items) {
+                this.items = items;
+                this.render();
+            }
+
+            render() {
+                this.container.innerHTML = '';
+                this.visibleItems.clear();
+                this.container.style.minHeight = `${this.items.length * this.itemHeight}px`;
+                
+                // 初始只渲染可见区域的项目
+                const viewportHeight = window.innerHeight;
+                const visibleCount = Math.ceil(viewportHeight / this.itemHeight) + 2;
+                const initialItems = this.items.slice(0, Math.min(visibleCount, this.items.length));
+                
+                initialItems.forEach((item, index) => {
+                    const element = this.createGameCard(item);
+                    element.style.position = 'absolute';
+                    element.style.top = `${index * this.itemHeight}px`;
+                    element.style.width = '100%';
+                    this.container.appendChild(element);
+                    this.visibleItems.add(index);
+                    this.observer.observe(element);
+                });
+            }
+
+            handleIntersection(entries) {
+                entries.forEach(entry => {
+                    const element = entry.target;
+                    const index = parseInt(element.style.top) / this.itemHeight;
+                    
+                    if (entry.isIntersecting) {
+                        // 加载当前项目周围的项目
+                        const range = 2;
+                        for (let i = Math.max(0, index - range); i <= Math.min(this.items.length - 1, index + range); i++) {
+                            this.loadItem(i);
+                        }
+                    } else {
+                        // 移除不可见的项目
+                        if (this.visibleItems.has(index)) {
+                            element.remove();
+                            this.visibleItems.delete(index);
+                        }
+                    }
+                });
+            }
+
+            handleScroll() {
+                const scrollTop = window.scrollY;
+                const viewportHeight = window.innerHeight;
+                
+                // 计算可见范围内的项目
+                const startIndex = Math.max(0, Math.floor(scrollTop / this.itemHeight) - 1);
+                const endIndex = Math.min(
+                    this.items.length - 1,
+                    Math.ceil((scrollTop + viewportHeight) / this.itemHeight) + 1
+                );
+                
+                // 加载可见范围内的项目
+                for (let i = startIndex; i <= endIndex; i++) {
+                    this.loadItem(i);
+                }
+                
+                // 移除超出可见范围的项目
+                this.visibleItems.forEach(index => {
+                    if (index < startIndex - 1 || index > endIndex + 1) {
+                        const element = this.container.querySelector(`[style*="top: ${index * this.itemHeight}px"]`);
+                        if (element) {
+                            element.remove();
+                            this.visibleItems.delete(index);
+                        }
+                    }
+                });
+            }
+
+            loadItem(index) {
+                if (index < 0 || index >= this.items.length) return;
+                if (this.visibleItems.has(index)) return;
+
+                const element = this.createGameCard(this.items[index]);
+                element.style.position = 'absolute';
+                element.style.top = `${index * this.itemHeight}px`;
+                element.style.width = '100%';
+                this.container.appendChild(element);
+                this.visibleItems.add(index);
+                this.observer.observe(element);
+            }
+
+            createGameCard(game) {
+                const card = document.createElement('div');
+                card.className = 'game-card';
+                card.dataset.gameId = game.id;
+                
+                const gameTitle = game.title || `Minecraft ${game.version} (${game.loader_type})`;
+                const lastPlayed = game.last_played ? new Date(game.last_played).toLocaleString() : '从未游玩';
+                const version = game.loader_type === 'vanilla' ? 
+                    `正式版 ${game.version}` : `${game.loader_type} ${game.loader_version || ''} ${game.version}`;
+
+                card.innerHTML = `
+                    <div class="game-banner" style="background: linear-gradient(45deg, #4CAF50, #2E7D32);">
+                        <i class="fas fa-cube game-icon"></i>
+                    </div>
+                    <div class="game-info">
+                        <h3 class="game-title">${gameTitle}</h3>
+                        <div class="game-meta">
+                            <p><i class="fas fa-code-branch"></i> ${version}</p>
+                            <p><i class="fas fa-clock"></i> 最后游玩: ${lastPlayed}</p>
+                        </div>
+                        <div class="game-actions">
+                            <button class="play-btn">
+                                <i class="fas fa-play"></i> 启动游戏
+                            </button>
+                            <button class="settings-btn">
+                                <i class="fas fa-cog"></i> 设置
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                return card;
+            }
+        }
+
+        // 优化的游戏列表管理器
+        const gameManager = {
+            virtualList: null,
+            allGames: [],
+            
+            init() {
+                const container = document.getElementById('games-grid');
+                if (!container) return;
+                
+                this.virtualList = new VirtualList(container);
+                this.loadGames();
+                
+                // 添加WebChannel连接检测
+                this.checkWebChannelConnection();
+                
+                // 添加滚动防抖
+                window.addEventListener('scroll', utils.debounce(() => {
+                    if (this.virtualList) this.virtualList.handleScroll();
+                }, 100));
+
+                // 绑定事件处理
+                bindGameCardEvents();
+                initFilters();
+            },
+            
+            checkWebChannelConnection() {
+                let attempts = 0;
+                const maxAttempts = 50;
+                
+                const checkConnection = () => {
+                    if (window.pyBridge && window.pyBridge.ping) {
+                        window.pyBridge.ping().then(response => {
+                            if (response === 'pong') {
+                                console.log('WebChannel连接成功');
+                                this.loadGames();
+                            }
+                        });
+                    } else if (attempts < maxAttempts) {
+                        attempts++;
+                        setTimeout(checkConnection, 100);
+                    } else {
+                        this.showError('无法连接到启动器');
+                    }
+                };
+                
+                checkConnection();
+            },
+            
+            async loadGames() {
+                try {
+                    if (!window.pyBridge || !window.pyBridge.getGamesList) {
+                        throw new Error('pyBridge未就绪');
+                    }
+                    
+                    const gamesData = await window.pyBridge.getGamesList();
+                    this.allGames = JSON.parse(gamesData);
+                    
+                    if (this.allGames.length === 0) {
+                        showFallbackContent();
+                        return;
+                    }
+                    
+                    if (this.virtualList) {
+                        this.virtualList.setItems(this.allGames);
+                    }
+                } catch (error) {
+                    console.error('加载游戏列表失败:', error);
+                    this.showError('无法加载游戏列表');
+                }
+            },
+
+            filterGames(filter) {
+                if (!filter || filter === 'all') return this.allGames;
+                
+                return this.allGames.filter(game => {
+                    switch (filter) {
+                        case 'vanilla':
+                            return game.loader_type === 'vanilla';
+                        case 'forge':
+                            return game.loader_type === 'forge';
+                        case 'fabric':
+                            return game.loader_type === 'fabric';
+                        default:
+                            return true;
+                    }
+                });
+            },
+            
+            showError(message) {
+                const container = document.getElementById('games-grid');
+                if (!container) return;
+                
+                container.innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>${message}</div>
+                        <button onclick="location.reload()">重试</button>
+                    </div>
+                `;
+            },
+        };
+
+        // 初始化
+        gameManager.init();
+
+        // 工具函数
+        const utils = {
+            debounce(func, delay) {
+                let timeout;
+                return function(...args) {
+                    const context = this;
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(context, args), delay);
+                };
+            },
+        };
+
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check' : 'fa-times'}"></i>
+                ${message}
+            `;
+            document.body.appendChild(notification);
+
+            // 显示动画
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+
+            // 自动关闭
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // 优化游戏列表加载
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const games = await window.pyBridge.getGamesList();
+                renderGames(games);
+            } catch (error) {
+                console.error('加载游戏列表失败:', error);
+                document.getElementById('games-grid').innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        加载游戏列表失败: ${error.message}
+                    </div>
+                `;
+            }
+        });
+
+        // 优化的游戏渲染函数
+        const renderGames = (games) => {
+            const grid = document.getElementById('games-grid');
+            grid.innerHTML = '';
+            
+            if (!games.length) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-gamepad"></i>
+                        <p>暂无已安装游戏</p>
+                        <button class="btn-primary" onclick="window.location.href='downloads.html'">
+                            <i class="fas fa-download"></i> 下载新游戏
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            games.forEach(game => {
+                const card = document.createElement('div');
+                card.className = 'game-card';
+                card.dataset.gameId = game.id;
+                card.innerHTML = `
+                    <div class="game-icon">
+                        <img src="${game.icon || 'default-game-icon.png'}" alt="${game.title}">
+                    </div>
+                    <div class="game-info">
+                        <h3 class="game-title">${game.title}</h3>
+                        <div class="game-meta">
+                            <span>版本: ${game.version}</span>
+                            <span>加载器: ${game.loader_type}</span>
+                        </div>
+                        <div class="game-actions">
+                            <button class="launch-btn">启动</button>
+                            <button class="delete-btn">删除</button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        };
     </script>
 </body>
 </html>

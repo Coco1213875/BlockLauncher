@@ -1,0 +1,11 @@
+{
+  "game_directory": "C:\\Users\\admin\\BlockLauncher",
+  "java_path": "C:\\Users\\admin\\BlockLauncher\\java\\jre-17.0.8.1-full\\bin\\java.exe",
+  "selected_account": "",
+  "accounts": {},
+  "last_used_version": "",
+  "selected_mirror": "\u5b98\u65b9",
+  "max_memory": 2048,
+  "download_threads": 8,
+  "default_resource_source": "Modrinth"
+}
